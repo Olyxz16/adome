@@ -1,0 +1,88 @@
+/* Global Reset */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+html {
+    background-color: var(--bg-app);
+    color: var(--text-main);
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    color: var(--text-main);
+    font-family: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+    "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+    background-color: var(--bg-app);
+    transition: background-color 0.3s, color 0.3s;
+    overflow: hidden; /* Prevent body scroll */
+}
+
+@font-face {
+    font-family: "Nunito";
+    font-style: normal;
+    font-weight: 400;
+    src: local(""),
+    url("assets/fonts/nunito-v16-latin-regular.woff2") format("woff2");
+}
+
+#app {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    display: flex; 
+    flex-direction: column;
+}
+
+/* CSS Variables for Theming */
+:root {
+    --bg-app: #f0f0f0;
+    --bg-ribbon: #f3f2f1;
+    --bg-ribbon-tabs: #f3f2f1;
+    --bg-ribbon-content: #ffffff;
+    --bg-editor: #fafafa;
+    --bg-preview: #ffffff;
+    
+    --text-main: #333333;
+    --text-label: #555555;
+    --text-tab: #444444;
+    --text-tab-active: #0078d4;
+    --text-group-title: #888888;
+    
+    --border-color: #dcdcdc;
+    --border-separator: #e1e1e1;
+    
+    --btn-hover: #eff6fc;
+    --btn-active: #deecf9;
+    --btn-border-hover: #deecf9;
+    
+    --input-bg: #ffffff;
+    --input-border: #cccccc;
+}
+
+.dark-theme {
+    --bg-app: #202020;
+    --bg-ribbon: #2d2d2d;
+    --bg-ribbon-tabs: #2d2d2d;
+    --bg-ribbon-content: #333333;
+    --bg-editor: #1e1e1e;
+    --bg-preview: #252526;
+    
+    --text-main: #e0e0e0;
+    --text-label: #cccccc;
+    --text-tab: #cccccc;
+    --text-tab-active: #61dafb; /* React blue-ish, nice visible color */
+    --text-group-title: #aaaaaa;
+    
+    --border-color: #444444;
+    --border-separator: #555555;
+    
+    --btn-hover: #444444;
+    --btn-active: #555555;
+    --btn-border-hover: #555555;
+    
+    --input-bg: #3c3c3c;
+    --input-border: #555555;
+}
