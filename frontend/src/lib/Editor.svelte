@@ -6,14 +6,22 @@
   const dispatch = createEventDispatcher();
 
   function handleInput(e) {
-    dispatch('input', e);
+    dispatch('input', e.target.value);
+  }
+
+  function handleKeydown(e) {
+    if (e.shiftKey && e.key === 'Enter') {
+      e.preventDefault();
+      dispatch('refresh');
+    }
   }
 </script>
 
 <div class="editor-pane">
   <textarea 
     bind:value={value} 
-    on:input={handleInput} 
+    on:input={handleInput}
+    on:keydown={handleKeydown} 
     placeholder="Enter Mermaid code here..."
     spellcheck="false"
   ></textarea>

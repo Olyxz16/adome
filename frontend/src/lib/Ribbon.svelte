@@ -5,6 +5,7 @@
   export let currentMermaidTheme: string;
   export let appThemes: string[];
   export let mermaidThemes: string[];
+  export let autoRender = true;
 
   const dispatch = createEventDispatcher();
 
@@ -30,6 +31,10 @@
 
   function render() {
     dispatch('render');
+  }
+  
+  function handleAutoRenderChange() {
+    dispatch('toggleAutoRender', autoRender);
   }
 
   function handleAppThemeChange() {
@@ -89,6 +94,12 @@
         <div class="ribbon-btn" role="button" tabindex="0" on:click={render} on:keypress={(e) => e.key === 'Enter' && render()}>
           <span class="icon">🔄</span>
           <span class="label">Render</span>
+        </div>
+        <div class="control-box" style="margin-left: 10px; justify-content: center;">
+             <label style="display: flex; align-items: center; cursor: pointer;">
+                <input type="checkbox" bind:checked={autoRender} on:change={handleAutoRenderChange} style="margin-right: 5px;">
+                Auto-Sync
+             </label>
         </div>
       </div>
     </div>

@@ -23,6 +23,9 @@
   const appThemes = ['light', 'dark', 'system'];
   let currentAppTheme = 'system';
   let isDarkMode = false; // Resolved state
+  
+  // Auto Render
+  let autoRender = true;
 
   let mediaQueryList;
 
@@ -101,7 +104,16 @@
   function handleInputChange(event) {
     input = event.detail; // Sync value from Editor
     clearTimeout(timer);
-    timer = setTimeout(triggerRender, 500);
+    if (autoRender) {
+        timer = setTimeout(triggerRender, 200);
+    }
+  }
+  
+  function handleToggleAutoRender(event) {
+      autoRender = event.detail;
+      if (autoRender) {
+          triggerRender();
+      }
   }
 
   async function handleSave() {
@@ -162,12 +174,14 @@
     {currentMermaidTheme}
     {appThemes}
     {mermaidThemes}
+    {autoRender}
     on:load={handleLoad}
     on:save={handleSave}
     on:exportMMD={handleExportMMD}
     on:exportSVG={handleExportSVG}
     on:exportPNG={handleExportPNG}
     on:render={triggerRender}
+    on:toggleAutoRender={handleToggleAutoRender}
     on:appThemeChange={handleAppThemeChange}
     on:mermaidThemeChange={handleMermaidThemeChange}
   />
@@ -175,7 +189,8 @@
   <div class="workspace">
     <Editor 
       value={input} 
-      on:input={handleInputChange} 
+      on:input={handleInputChange}
+      on:refresh={triggerRender} 
     />
     <Preview bind:this={previewComponent} />
   </div>
