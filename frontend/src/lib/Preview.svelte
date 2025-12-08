@@ -1,5 +1,10 @@
 <script lang="ts">
   import mermaid from 'mermaid';
+  import elkLayouts from '@mermaid-js/layout-elk';
+  import { type GraphTheme, getMermaidThemeVariables } from './theme-store';
+  
+  // Register ELK layout
+  mermaid.registerLayoutLoaders(elkLayouts);
   
   let container: HTMLElement;
   export let errorMsg = '';
@@ -13,26 +18,39 @@
   let startY = 0;
   let previewPane: HTMLElement;
 
-  export async function render(input: string, theme: string) {
-    if (!container) return;
-    errorMsg = '';
-    try {
-      mermaid.initialize({ 
-        startOnLoad: false, 
-        theme: theme,
-        securityLevel: 'loose' 
-      });
-
-      // Unique ID for each render to prevent conflicts
-      const id = 'mermaid-' + Math.random().toString(36).substr(2, 9);
-      const { svg } = await mermaid.render(id, input);
-      container.innerHTML = svg;
-    } catch (e) {
-      console.error(e);
-      errorMsg = e.message || 'Error rendering graph';
+    export async function render(input: string, theme: GraphTheme, useElk: boolean = false) {
+      if (!container) return;
+      errorMsg = '';
+      try {
+        const themeVariables = getMermaidThemeVariables(theme);
+        console.log('[Preview] Rendering Mermaid. Theme:', theme.name, 'Variables:', themeVariables, 'ELK:', useElk);
+        
+        mermaid.initialize({ 
+          startOnLoad: false, 
+          theme: 'base', // Use 'base' to allow full customization via variables
+          themeVariables: themeVariables,
+          securityLevel: 'loose',
+          flowchart: { htmlLabels: true, curve: 'basis' }
+        });
+  
+        // Inject ELK directive if requested
+        let graphDefinition = input;
+        if (useElk) {
+            // Check if directive already exists to avoid duplication if user typed it
+            if (!graphDefinition.includes('defaultRenderer')) {
+                graphDefinition = `%%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%\n` + graphDefinition;
+            }
+        }
+  
+        // Unique ID for each render to prevent conflicts
+        const id = 'mermaid-' + Math.random().toString(36).substr(2, 9);
+        const { svg } = await mermaid.render(id, graphDefinition);
+        container.innerHTML = svg;
+      } catch (e) {
+        console.error(e);
+        errorMsg = e.message || 'Error rendering graph';
+      }
     }
-  }
-
   function onMouseDown(e: MouseEvent) {
     if (e.button !== 0 && e.button !== 1) return; // Only Left or Middle click
     isPanning = true;
@@ -104,7 +122,7 @@
       return container ? container.innerHTML : '';
   }
 
-  export function getPNG() {
+  export function getPNG(): Promise<string> {
       return new Promise((resolve, reject) => {
           if (!container) {
               reject('No content');

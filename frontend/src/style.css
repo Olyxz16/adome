@@ -112,7 +112,7 @@ body {
 }
 
 /* --- Mermaid Overrides to match Adome Theme --- */
-/* We use !important to override inline styles or high-specificity mermaid defaults */
+/* We still use !important to enforce strict consistency with ELK, especially for stroke widths and exact color matching */
 
 /* Nodes */
 .mermaid-container .node rect,
@@ -152,11 +152,11 @@ body {
 
 /* Flowchart specific text */
 .mermaid-container .edgeLabel {
-    background-color: var(--bg-preview) !important; /* Make edge labels readable */
+    background-color: var(--diagram-label-bg) !important;
     color: var(--diagram-node-text) !important;
 }
 
 .mermaid-container .edgeLabel rect {
-    opacity: 0.8 !important;
-    fill: var(--bg-preview) !important;
+    opacity: 0.9 !important;
+    fill: var(--diagram-label-bg) !important;
 }

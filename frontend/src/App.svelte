@@ -1,10 +1,11 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
+  import { get } from 'svelte/store';
   import { SaveMermaid, LoadMermaid, ExportSVG, ExportPNG, IsDarkTheme } from '../wailsjs/go/main/App.js';
+  import { currentTheme, applyTheme, defaultLightTheme, defaultDarkTheme } from './lib/theme-store';
   import Ribbon from './lib/Ribbon.svelte';
   import Editor from './lib/Editor.svelte';
   import Preview from './lib/Preview.svelte';
-  import ElkPreview from './lib/ElkPreview.svelte';
 
   let input = `graph TD
     A[Christmas] -->|Get money| B(Go shopping)
@@ -15,9 +16,8 @@
   `;
   
   let previewComponent: Preview;
-  let elkPreviewComponent: ElkPreview;
   
-  // Mermaid Themes
+  // Mermaid Themes (Deprecated in favor of Unified Theme, keeping for Ribbon compat)
   const mermaidThemes = ['auto', 'default', 'neutral', 'dark', 'forest', 'base'];
   let currentMermaidTheme = 'auto';
 
@@ -72,6 +72,11 @@
       isDarkMode = currentAppTheme === 'dark';
     }
     updateBodyClass();
+    
+    // Unified Theme Logic
+    const newTheme = isDarkMode ? defaultDarkTheme : defaultLightTheme;
+    currentTheme.set(newTheme);
+    applyTheme(newTheme);
   }
 
   function updateBodyClass() {
@@ -89,6 +94,8 @@
 
   function handleMermaidThemeChange(event) {
     currentMermaidTheme = event.detail;
+    // We ignore specific mermaid theme changes for now as we enforce the unified theme
+    // But we trigger render to ensure state consistency
     if (layoutEngine === 'mermaid') triggerRender();
   }
   
@@ -103,18 +110,11 @@
       if (layoutEngine === 'elk') triggerRender();
   }
 
-  function getEffectiveMermaidTheme() {
-      if (currentMermaidTheme === 'auto') {
-          return isDarkMode ? 'dark' : 'default';
-      }
-      return currentMermaidTheme;
-  }
-
   function triggerRender() {
-    if (layoutEngine === 'mermaid' && previewComponent) {
-      previewComponent.render(input, getEffectiveMermaidTheme());
-    } else if (layoutEngine === 'elk' && elkPreviewComponent) {
-      elkPreviewComponent.render(input, currentElkAlgorithm);
+    if (previewComponent) {
+      const useElk = layoutEngine === 'elk';
+      // Pass the full theme object and the ELK flag
+      previewComponent.render(input, get(currentTheme), useElk);
     }
   }
 
@@ -151,10 +151,8 @@
   async function handleExportSVG() {
       try {
           let content = '';
-          if (layoutEngine === 'mermaid' && previewComponent) {
+          if (previewComponent) {
                content = previewComponent.getSVG();
-          } else if (layoutEngine === 'elk' && elkPreviewComponent) {
-               content = elkPreviewComponent.getSVG();
           }
           
           if (!content) {
@@ -171,10 +169,8 @@
   async function handleExportPNG() {
       try {
           let base64 = '';
-          if (layoutEngine === 'mermaid' && previewComponent) {
+          if (previewComponent) {
                base64 = await previewComponent.getPNG();
-          } else if (layoutEngine === 'elk' && elkPreviewComponent) {
-               base64 = await elkPreviewComponent.getPNG();
           }
 
           const msg = await ExportPNG(base64);
@@ -225,11 +221,7 @@
       on:input={handleInputChange}
       on:refresh={triggerRender} 
     />
-    {#if layoutEngine === 'mermaid'}
-       <Preview bind:this={previewComponent} />
-    {:else}
-       <ElkPreview bind:this={elkPreviewComponent} />
-    {/if}
+    <Preview bind:this={previewComponent} />
   </div>
 </main>
 
