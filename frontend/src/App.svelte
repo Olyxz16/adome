@@ -112,9 +112,9 @@
 
   function triggerRender() {
     if (previewComponent) {
-      const useElk = layoutEngine === 'elk';
-      // Pass the full theme object and the ELK flag
-      previewComponent.render(input, get(currentTheme), useElk);
+      const elkAlgorithm = layoutEngine === 'elk' ? currentElkAlgorithm : '';
+      // Pass the full theme object and the ELK algorithm
+      previewComponent.render(input, get(currentTheme), elkAlgorithm);
     }
   }
 

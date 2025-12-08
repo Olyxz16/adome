@@ -18,40 +18,53 @@
   let startY = 0;
   let previewPane: HTMLElement;
 
-    export async function render(input: string, theme: GraphTheme, useElk: boolean = false) {
-      if (!container) return;
-      errorMsg = '';
-      try {
-        const themeVariables = getMermaidThemeVariables(theme);
-        console.log('[Preview] Rendering Mermaid. Theme:', theme.name, 'Variables:', themeVariables, 'ELK:', useElk);
-        
-        mermaid.initialize({ 
-          startOnLoad: false, 
-          theme: 'base', // Use 'base' to allow full customization via variables
-          themeVariables: themeVariables,
-          securityLevel: 'loose',
-          flowchart: { htmlLabels: true, curve: 'basis' }
-        });
-  
-        // Inject ELK directive if requested
-        let graphDefinition = input;
-        if (useElk) {
-            // Check if directive already exists to avoid duplication if user typed it
-            if (!graphDefinition.includes('defaultRenderer')) {
-                graphDefinition = `%%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%\n` + graphDefinition;
-            }
-        }
-  
-        // Unique ID for each render to prevent conflicts
-        const id = 'mermaid-' + Math.random().toString(36).substr(2, 9);
-        const { svg } = await mermaid.render(id, graphDefinition);
-        container.innerHTML = svg;
-      } catch (e) {
-        console.error(e);
-        errorMsg = e.message || 'Error rendering graph';
+  export async function render(input: string, theme: GraphTheme, elkAlgorithm: string = '') {
+    if (!container) return;
+    errorMsg = '';
+    const useElk = !!elkAlgorithm;
+
+    try {
+      const themeVariables = getMermaidThemeVariables(theme);
+      
+      mermaid.initialize({ 
+        startOnLoad: false, 
+        theme: 'base', // Use 'base' to allow full customization via variables
+        themeVariables: themeVariables,
+        securityLevel: 'loose',
+        flowchart: { htmlLabels: true, curve: 'basis' }
+      });
+
+      let graphDefinition = input;
+      
+      // Inject ELK Frontmatter if requested
+      if (useElk) {
+          // Determine layout string
+          // Default to 'elk' (which maps to layered)
+          let layoutName = 'elk';
+          
+          // For specific algorithms, use 'elk.<algo>'
+          if (elkAlgorithm && elkAlgorithm !== 'layered') {
+              layoutName = `elk.${elkAlgorithm}`;
+          }
+
+          // Check if frontmatter already exists to avoid duplication or conflict
+          // We check for the specific 'layout: elk' or 'layout: elk.' pattern
+          if (!graphDefinition.match(/layout:\s*elk/)) {
+              const frontmatter = `---\nconfig:\n  layout: ${layoutName}\n---\n`;
+              // Add newline if input doesn't start with one, though frontmatter handles it
+              graphDefinition = frontmatter + graphDefinition;
+          }
       }
+
+      // Unique ID for each render to prevent conflicts
+      const id = 'mermaid-' + Math.random().toString(36).substr(2, 9);
+      const { svg } = await mermaid.render(id, graphDefinition);
+      container.innerHTML = svg;
+    } catch (e) {
+      console.error(e);
+      errorMsg = e.message || 'Error rendering graph';
     }
-  function onMouseDown(e: MouseEvent) {
+  }  function onMouseDown(e: MouseEvent) {
     if (e.button !== 0 && e.button !== 1) return; // Only Left or Middle click
     isPanning = true;
     startX = e.clientX - translateX;
