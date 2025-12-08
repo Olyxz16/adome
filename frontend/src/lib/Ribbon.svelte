@@ -6,6 +6,11 @@
   export let appThemes: string[];
   export let mermaidThemes: string[];
   export let autoRender = true;
+  
+  // ELK Integration
+  export let layoutEngine = 'mermaid'; // 'mermaid' | 'elk'
+  export let currentElkAlgorithm = 'layered';
+  const elkAlgorithms = ['layered', 'stress', 'mrtree', 'radial', 'force', 'disco'];
 
   const dispatch = createEventDispatcher();
 
@@ -43,6 +48,14 @@
 
   function handleMermaidThemeChange() {
     dispatch('mermaidThemeChange', currentMermaidTheme);
+  }
+  
+  function handleLayoutEngineChange() {
+      dispatch('layoutEngineChange', layoutEngine);
+  }
+
+  function handleElkAlgorithmChange() {
+      dispatch('elkAlgorithmChange', currentElkAlgorithm);
   }
 </script>
 
@@ -95,6 +108,26 @@
           <span class="icon">🔄</span>
           <span class="label">Render</span>
         </div>
+        
+        <div class="control-box" style="margin-left: 10px;">
+          <label for="engine-select">Engine</label>
+          <select id="engine-select" bind:value={layoutEngine} on:change={handleLayoutEngineChange}>
+            <option value="mermaid">Mermaid</option>
+            <option value="elk">ELK (Exp)</option>
+          </select>
+        </div>
+        
+        {#if layoutEngine === 'elk'}
+            <div class="control-box" style="margin-left: 10px;">
+              <label for="elk-algo-select">Algorithm</label>
+              <select id="elk-algo-select" bind:value={currentElkAlgorithm} on:change={handleElkAlgorithmChange}>
+                {#each elkAlgorithms as algo}
+                  <option value={algo}>{algo}</option>
+                {/each}
+              </select>
+            </div>
+        {/if}
+
         <div class="control-box" style="margin-left: 10px; justify-content: center;">
              <label style="display: flex; align-items: center; cursor: pointer;">
                 <input type="checkbox" bind:checked={autoRender} on:change={handleAutoRenderChange} style="margin-right: 5px;">

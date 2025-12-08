@@ -60,6 +60,22 @@ body {
     
     --input-bg: #ffffff;
     --input-border: #cccccc;
+
+    /* --- Shared Diagram Theme Variables --- */
+    --diagram-bg: transparent;
+    --diagram-font-family: "Nunito", sans-serif;
+    
+    /* Nodes */
+    --diagram-node-bg: #ECECFF;
+    --diagram-node-stroke: #9370DB;
+    --diagram-node-stroke-width: 1.5px;
+    --diagram-node-text: #333333;
+    
+    /* Edges */
+    --diagram-edge-stroke: #333333;
+    --diagram-edge-stroke-width: 2px;
+    --diagram-marker-fill: #333333;
+    --diagram-label-bg: #e0e0e0; /* Distinct light grey for label background */
 }
 
 .dark-theme {
@@ -73,7 +89,7 @@ body {
     --text-main: #e0e0e0;
     --text-label: #cccccc;
     --text-tab: #cccccc;
-    --text-tab-active: #61dafb; /* React blue-ish, nice visible color */
+    --text-tab-active: #61dafb;
     --text-group-title: #aaaaaa;
     
     --border-color: #444444;
@@ -85,4 +101,62 @@ body {
     
     --input-bg: #3c3c3c;
     --input-border: #555555;
+
+    /* --- Shared Diagram Theme Variables (Dark) --- */
+    --diagram-node-bg: #2a2a2a;
+    --diagram-node-stroke: #81B1DB;
+    --diagram-node-text: #e0e0e0;
+    --diagram-edge-stroke: #cccccc;
+    --diagram-marker-fill: #cccccc;
+    --diagram-label-bg: #383838; /* Distinct dark grey for label background */
+}
+
+/* --- Mermaid Overrides to match Adome Theme --- */
+/* We use !important to override inline styles or high-specificity mermaid defaults */
+
+/* Nodes */
+.mermaid-container .node rect,
+.mermaid-container .node circle,
+.mermaid-container .node ellipse,
+.mermaid-container .node polygon,
+.mermaid-container .node path {
+    fill: var(--diagram-node-bg) !important;
+    stroke: var(--diagram-node-stroke) !important;
+    stroke-width: var(--diagram-node-stroke-width) !important;
+}
+
+/* Text */
+.mermaid-container .node .label,
+.mermaid-container .node .label text,
+.mermaid-container .cluster .label text,
+.mermaid-container .label {
+    fill: var(--diagram-node-text) !important;
+    color: var(--diagram-node-text) !important;
+    font-family: var(--diagram-font-family) !important;
+}
+
+/* Edges */
+.mermaid-container .edgePath .path {
+    stroke: var(--diagram-edge-stroke) !important;
+    stroke-width: var(--diagram-edge-stroke-width) !important;
+}
+
+/* Markers (Arrows) */
+.mermaid-container .edgeMarker,
+.mermaid-container marker path,
+.mermaid-container marker polygon,
+.mermaid-container marker circle {
+    fill: var(--diagram-marker-fill) !important;
+    stroke: var(--diagram-marker-fill) !important;
+}
+
+/* Flowchart specific text */
+.mermaid-container .edgeLabel {
+    background-color: var(--bg-preview) !important; /* Make edge labels readable */
+    color: var(--diagram-node-text) !important;
+}
+
+.mermaid-container .edgeLabel rect {
+    opacity: 0.8 !important;
+    fill: var(--bg-preview) !important;
 }

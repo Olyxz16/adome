@@ -4,6 +4,7 @@
   import Ribbon from './lib/Ribbon.svelte';
   import Editor from './lib/Editor.svelte';
   import Preview from './lib/Preview.svelte';
+  import ElkPreview from './lib/ElkPreview.svelte';
 
   let input = `graph TD
     A[Christmas] -->|Get money| B(Go shopping)
@@ -14,10 +15,15 @@
   `;
   
   let previewComponent: Preview;
+  let elkPreviewComponent: ElkPreview;
   
   // Mermaid Themes
   const mermaidThemes = ['auto', 'default', 'neutral', 'dark', 'forest', 'base'];
   let currentMermaidTheme = 'auto';
+
+  // ELK Settings
+  let layoutEngine = 'mermaid'; // 'mermaid' | 'elk'
+  let currentElkAlgorithm = 'layered';
 
   // App Themes
   const appThemes = ['light', 'dark', 'system'];
@@ -83,7 +89,18 @@
 
   function handleMermaidThemeChange(event) {
     currentMermaidTheme = event.detail;
-    triggerRender();
+    if (layoutEngine === 'mermaid') triggerRender();
+  }
+  
+  function handleLayoutEngineChange(event) {
+      layoutEngine = event.detail;
+      // Wait for component switch then render
+      setTimeout(triggerRender, 0);
+  }
+
+  function handleElkAlgorithmChange(event) {
+      currentElkAlgorithm = event.detail;
+      if (layoutEngine === 'elk') triggerRender();
   }
 
   function getEffectiveMermaidTheme() {
@@ -94,8 +111,10 @@
   }
 
   function triggerRender() {
-    if (previewComponent) {
+    if (layoutEngine === 'mermaid' && previewComponent) {
       previewComponent.render(input, getEffectiveMermaidTheme());
+    } else if (layoutEngine === 'elk' && elkPreviewComponent) {
+      elkPreviewComponent.render(input, currentElkAlgorithm);
     }
   }
 
@@ -130,9 +149,14 @@
   }
 
   async function handleExportSVG() {
-      if (!previewComponent) return;
       try {
-          const content = previewComponent.getSVG();
+          let content = '';
+          if (layoutEngine === 'mermaid' && previewComponent) {
+               content = previewComponent.getSVG();
+          } else if (layoutEngine === 'elk' && elkPreviewComponent) {
+               content = elkPreviewComponent.getSVG();
+          }
+          
           if (!content) {
               console.error("No SVG content to export");
               return;
@@ -145,9 +169,14 @@
   }
 
   async function handleExportPNG() {
-      if (!previewComponent) return;
       try {
-          const base64 = await previewComponent.getPNG();
+          let base64 = '';
+          if (layoutEngine === 'mermaid' && previewComponent) {
+               base64 = await previewComponent.getPNG();
+          } else if (layoutEngine === 'elk' && elkPreviewComponent) {
+               base64 = await elkPreviewComponent.getPNG();
+          }
+
           const msg = await ExportPNG(base64);
           console.log(msg);
       } catch (e) {
@@ -175,6 +204,8 @@
     {appThemes}
     {mermaidThemes}
     {autoRender}
+    {layoutEngine}
+    {currentElkAlgorithm}
     on:load={handleLoad}
     on:save={handleSave}
     on:exportMMD={handleExportMMD}
@@ -184,6 +215,8 @@
     on:toggleAutoRender={handleToggleAutoRender}
     on:appThemeChange={handleAppThemeChange}
     on:mermaidThemeChange={handleMermaidThemeChange}
+    on:layoutEngineChange={handleLayoutEngineChange}
+    on:elkAlgorithmChange={handleElkAlgorithmChange}
   />
   
   <div class="workspace">
@@ -192,9 +225,14 @@
       on:input={handleInputChange}
       on:refresh={triggerRender} 
     />
-    <Preview bind:this={previewComponent} />
+    {#if layoutEngine === 'mermaid'}
+       <Preview bind:this={previewComponent} />
+    {:else}
+       <ElkPreview bind:this={elkPreviewComponent} />
+    {/if}
   </div>
 </main>
+
 
 <style>
   /* Workspace Styles - layout only */
