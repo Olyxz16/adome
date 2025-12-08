@@ -21,6 +21,14 @@ export interface GraphTheme {
     nodeRx: string;
 }
 
+export interface GraphLayoutOptions {
+    nodeNodeSpacing: number;
+    nodeNodeBetweenLayersSpacing: number;
+    repulsivePower: number; // for force-directed algorithms
+    desiredEdgeLength: number; // for stress algorithm
+    baseValueSpacing: number; // general spacing
+}
+
 export const defaultLightTheme: GraphTheme = {
     name: 'light',
     isDark: false,
@@ -34,7 +42,14 @@ export const defaultLightTheme: GraphTheme = {
     fontFamily: '"Nunito", sans-serif',
     nodeBorderWidth: '1px',
     edgeWidth: '1.5px',
-    nodeRx: '0px'
+    nodeRx: '0px',
+    layoutOptions: {
+        nodeNodeSpacing: 80,
+        nodeNodeBetweenLayersSpacing: 60,
+        repulsivePower: 5,
+        desiredEdgeLength: 450,
+        baseValueSpacing: 40
+    }
 };
 
 export const defaultDarkTheme: GraphTheme = {
@@ -50,7 +65,14 @@ export const defaultDarkTheme: GraphTheme = {
     fontFamily: '"Nunito", sans-serif',
     nodeBorderWidth: '1px',
     edgeWidth: '1.5px',
-    nodeRx: '0px'
+    nodeRx: '0px',
+    layoutOptions: {
+        nodeNodeSpacing: 80,
+        nodeNodeBetweenLayersSpacing: 60,
+        repulsivePower: 5,
+        desiredEdgeLength: 450,
+        baseValueSpacing: 40
+    }
 };
 
 export const currentTheme = writable<GraphTheme>(defaultLightTheme);

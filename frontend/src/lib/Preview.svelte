@@ -41,16 +41,31 @@
           // Determine layout string
           // Default to 'elk' (which maps to layered)
           let layoutName = 'elk';
+          let elkOptions = '';
+          const layoutOpts = theme.layoutOptions;
           
-          // For specific algorithms, use 'elk.<algo>'
           if (elkAlgorithm && elkAlgorithm !== 'layered') {
               layoutName = `elk.${elkAlgorithm}`;
           }
 
+          // Dynamically add ELK layout options based on the algorithm
+          if (elkAlgorithm === 'stress' || elkAlgorithm === 'force') {
+              elkOptions = `
+    org.eclipse.elk.force.repulsivePower: ${layoutOpts.repulsivePower}
+    org.eclipse.elk.stress.desiredEdgeLength: ${layoutOpts.desiredEdgeLength}`;
+          } else if (elkAlgorithm === 'layered') {
+              elkOptions = `
+    org.eclipse.elk.spacing.nodeNode: ${layoutOpts.nodeNodeSpacing}
+    org.eclipse.elk.layered.spacing.nodeNodeBetweenLayers: ${layoutOpts.nodeNodeBetweenLayersSpacing}
+    org.eclipse.elk.layered.spacing.baseValue: ${layoutOpts.baseValueSpacing}`;
+          }
+          // Add other specific options as needed for other algorithms
+
+
           // Check if frontmatter already exists to avoid duplication or conflict
           // We check for the specific 'layout: elk' or 'layout: elk.' pattern
           if (!graphDefinition.match(/layout:\s*elk/)) {
-              const frontmatter = `---\nconfig:\n  layout: ${layoutName}\n---\n`;
+              const frontmatter = `---\nconfig:\n  layout: ${layoutName}\n  elk: ${elkOptions}\n---\n`;
               // Add newline if input doesn't start with one, though frontmatter handles it
               graphDefinition = frontmatter + graphDefinition;
           }
