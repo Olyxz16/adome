@@ -51,9 +51,12 @@ export async function saveFile() {
     }
 }
 
-export async function compileD2(content: string): Promise<string> {
+export async function compileD2(content: string, themeID: number): Promise<string> {
     try {
-        return await CompileD2(content);
+        console.log(`[Store] Calling CompileD2 via Wails. Content len: ${content.length}, ThemeID: ${themeID}`);
+        const result = await CompileD2(content, themeID);
+        console.log(`[Store] Wails CompileD2 returned. Result len: ${result?.length}`);
+        return result;
     } catch (e) {
         console.error("D2 Compilation failed:", e);
         throw e;

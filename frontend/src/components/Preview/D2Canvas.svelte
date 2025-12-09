@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { compileD2 } from '../../lib/stores/editor';
+  import { isDarkMode } from '../../lib/stores/theme';
 
   export let code: string;
   
@@ -8,19 +9,36 @@
   let error = '';
   const dispatch = createEventDispatcher();
 
-  $: if (container && code) {
+  $: if (container && code !== undefined && $isDarkMode !== undefined) {
       render();
   }
 
   async function render() {
-      if (!container || !code) return;
+      if (!container) {
+          console.warn("D2Canvas: Container not ready");
+          return;
+      }
+      if (!code) {
+          console.warn("D2Canvas: No code to render");
+          return;
+      }
       try {
-          const svg = await compileD2(code);
-          if (container) container.innerHTML = svg;
+          // 0 = Default Light, 200 = Dark Mode
+          const themeID = $isDarkMode ? 200 : 0;
+          console.log(`D2Canvas: Requesting compile. ThemeID: ${themeID}, Code length: ${code.length}`);
+          
+          const svg = await compileD2(code, themeID);
+          
+          console.log(`D2Canvas: Received SVG. Length: ${svg?.length}`);
+          
+          if (container) {
+              container.innerHTML = svg;
+              console.log("D2Canvas: Updated container.innerHTML");
+          }
           error = '';
           dispatch('rendered', { svg });
       } catch (e: any) {
-          console.error(e);
+          console.error("D2Canvas: Render Error:", e);
           error = e.message || 'Error rendering D2';
           dispatch('error', e);
       }
@@ -34,7 +52,16 @@
 
 <style>
     .canvas-root {
-        display: inline-block;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-width: 100px;
+        min-height: 100px;
+    }
+    /* Force SVG to display correctly */
+    .canvas-root :global(svg) {
+        max-width: 100%;
+        height: auto;
     }
     .error-overlay {
         position: fixed;

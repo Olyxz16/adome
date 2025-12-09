@@ -43,12 +43,21 @@ export async function renderMermaid(id: string, code: string, theme: GraphTheme,
     
     // Theme Configuration Logic - Corrected to use name + isDark and include reset
     if (lastThemeName !== theme.name + theme.isDark) { 
+        mermaid.mermaidAPI.reset();
+        mermaid.registerLayoutLoaders(elkLayouts);
         const themeVariables = getMermaidThemeVariables(theme);
         mermaid.initialize({
+            startOnLoad: false,
+            securityLevel: 'strict',
             theme: 'base',
-            themeVariables: themeVariables
+            themeVariables: themeVariables,
+            flowchart: { 
+                htmlLabels: false, 
+                curve: 'basis' 
+            },
+            suppressErrorRendering: true
         });
-        lastThemeName = theme.name + theme.isDark; // <-- Corrected: full theme string
+        lastThemeName = theme.name + theme.isDark;
     }
 
     const useElk = !!elkAlgorithm;
