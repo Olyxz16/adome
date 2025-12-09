@@ -11,10 +11,30 @@
       autoRender 
   } from '../../lib/stores/editor';
   
-  import { currentAppTheme } from '../../lib/stores/theme';
+  import { 
+      currentAppTheme, 
+      currentTheme, 
+      userThemes, 
+      defaultLightTheme, 
+      defaultDarkTheme, 
+      applyTheme 
+  } from '../../lib/stores/theme';
 
   const appThemes = ['light', 'dark', 'system'];
   const elkAlgorithms = ['layered', 'stress', 'mrtree', 'radial', 'force', 'disco'];
+
+  let allGraphThemes = [defaultLightTheme, defaultDarkTheme];
+
+  // Reactively update allGraphThemes when userThemes store changes
+  $: allGraphThemes = [defaultLightTheme, defaultDarkTheme, ...$userThemes];
+
+  function handleDiagramThemeChange(e: Event) {
+      const target = e.target as HTMLSelectElement;
+      const selected = allGraphThemes.find(t => t.name === target.value);
+      if (selected && selected.name !== $currentTheme.name) {
+          currentTheme.set(selected);
+      }
+  }
 
   function handleLoad() {
     loadFile();
@@ -127,10 +147,19 @@
       <div class="group-title">Appearance</div>
       <div class="group-content">
         <div class="control-box">
-          <label for="app-theme-select">Theme</label>
+          <label for="app-theme-select">App Theme</label>
           <select id="app-theme-select" bind:value={$currentAppTheme}>
             {#each appThemes as theme}
               <option value={theme}>{theme}</option>
+            {/each}
+          </select>
+        </div>
+
+        <div class="control-box" style="margin-left: 10px;">
+          <label for="diagram-theme-select">Diagram Theme</label>
+          <select id="diagram-theme-select" value={$currentTheme.name} on:change={handleDiagramThemeChange}>
+            {#each allGraphThemes as theme}
+              <option value={theme.name}>{theme.name}</option>
             {/each}
           </select>
         </div>

@@ -83,6 +83,39 @@ export const isDarkMode = writable<boolean>(false);
 export const userThemes = writable<GraphTheme[]>([]);
 
 let mediaQueryList: MediaQueryList;
+let resolvingTheme = false; // The guard flag
+
+// Move guard logic into resolveTheme itself
+export async function resolveTheme() {
+    if (resolvingTheme) return; // Prevent re-entry
+    resolvingTheme = true;
+    try {
+        const appTheme = get(currentAppTheme);
+        let dark = false;
+
+        if (appTheme === 'system') {
+            let matches = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (!matches) {
+                try {
+                    // Assuming IsDarkTheme is available and works
+                    matches = await IsDarkTheme();
+                } catch (e) {
+                    console.error("Failed to check system theme:", e);
+                }
+            }
+            dark = matches;
+        } else {
+            dark = appTheme === 'dark';
+        }
+
+        isDarkMode.set(dark);
+        updateBodyClass(dark);
+    } finally {
+        resolvingTheme = false;
+    }
+}
+
+// ... (initTheme function and other subscribers)
 
 export function initTheme() {
     // specific listeners for system theme changes
@@ -92,9 +125,23 @@ export function initTheme() {
     resolveTheme();
     loadThemes();
     
-    // Subscribe to app theme changes
-    currentAppTheme.subscribe(() => {
-        resolveTheme();
+    // Subscribe to app theme changes - just call resolveTheme, guard is inside
+    currentAppTheme.subscribe(async () => {
+        await resolveTheme(); 
+    });
+
+    // Subscribe to currentTheme to apply its styles whenever it changes
+    currentTheme.subscribe((theme) => {
+        if (theme) {
+            applyTheme(theme);
+        }
+    });
+
+    // Subscribe to isDarkMode to ensure the current diagram theme's isDark property is always in sync
+    // This allows the diagram to correctly signal to Mermaid whether to render in dark mode,
+    // while preserving its color palette.
+    isDarkMode.subscribe((isDark) => {
+        currentTheme.update(theme => ({ ...theme, isDark: isDark }));
     });
 }
 
@@ -130,37 +177,11 @@ export function destroyTheme() {
 
 function handleSystemThemeChange(e: MediaQueryListEvent) {
     if (get(currentAppTheme) === 'system') {
-        resolveTheme();
+        resolveTheme(); // Just call resolveTheme, the guard is inside
     }
 }
 
-export async function resolveTheme() {
-    const appTheme = get(currentAppTheme);
-    let dark = false;
 
-    if (appTheme === 'system') {
-        let matches = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        if (!matches) {
-            try {
-                // Assuming IsDarkTheme is available and works
-                matches = await IsDarkTheme();
-            } catch (e) {
-                console.error("Failed to check system theme:", e);
-            }
-        }
-        dark = matches;
-    } else {
-        dark = appTheme === 'dark';
-    }
-
-    isDarkMode.set(dark);
-    updateBodyClass(dark);
-    
-    // Unified Theme Logic
-    const newTheme = dark ? defaultDarkTheme : defaultLightTheme;
-    currentTheme.set(newTheme);
-    applyTheme(newTheme);
-}
 
 function updateBodyClass(dark: boolean) {
     if (dark) {

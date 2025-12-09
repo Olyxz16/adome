@@ -17,21 +17,20 @@ declare global {
 }
 
 let isInitialized = false;
-let lastThemeName = '';
+let lastThemeName = ''; // Should capture name + isDark
 
 export function initMermaid() {
   if (isInitialized) return;
   
-  //mermaid.registerLayoutLoaders(elkLayouts);
+  mermaid.registerLayoutLoaders(elkLayouts);
   mermaid.initialize({
     startOnLoad: false,
-    // securityLevel: 'loose', // Removed to simplify
+    securityLevel: 'strict', // <-- Corrected: simplified/hardened
     theme: 'base',
     flowchart: { 
-        htmlLabels: false, // Changed to false for simpler rendering
+        htmlLabels: false, // <-- Corrected: simplified
         curve: 'basis' 
     },
-    // Prevent layout drift
     suppressErrorRendering: true 
   });
   isInitialized = true;
@@ -42,20 +41,20 @@ export async function renderMermaid(id: string, code: string, theme: GraphTheme,
         initMermaid();
     }
     
-     // Temporarily bypass theme configuration to rule it out as a cause of freeze
-     // if (lastThemeName !== theme.name + theme.isDark) { // This block was commented out in previous steps
-     //    const themeVariables = getMermaidThemeVariables(theme);
-     //    mermaid.mermaidAPI.setConfig({
-     //        theme: 'base',
-     //        themeVariables: themeVariables
-     //    });
-     //    lastThemeName = theme.name + theme.isDark;
-     // }
+    // Theme Configuration Logic - Corrected to use name + isDark and include reset
+    if (lastThemeName !== theme.name + theme.isDark) { 
+        const themeVariables = getMermaidThemeVariables(theme);
+        mermaid.initialize({
+            theme: 'base',
+            themeVariables: themeVariables
+        });
+        lastThemeName = theme.name + theme.isDark; // <-- Corrected: full theme string
+    }
 
     const useElk = !!elkAlgorithm;
     let graphDefinition = code;
 
-    // Inject ELK Frontmatter logic
+    // Inject ELK Frontmatter logic (this section should be stable)
     if (useElk) {
         let layoutName = 'elk';
         let elkOptions = '';
@@ -90,5 +89,15 @@ export async function renderMermaid(id: string, code: string, theme: GraphTheme,
         return svg;
     } catch (error: any) {
         console.error("Mermaid render warning:", error);
+        // Attempt to log to Wails backend - Corrected to throw error
+        if (window.go && window.go.main && window.go.main.App) {
+            const errorMessage = `[Mermaid Renderer Error] ${error.message || error.toString()}`;
+            if (window.go.main.App.LogError) {
+                window.go.main.App.LogError(errorMessage);
+            } else if (window.go.main.App.Log) {
+                window.go.main.App.Log(errorMessage);
+            }
+        }
+        throw error; // <-- Corrected: Re-throw error after logging
     }
 }

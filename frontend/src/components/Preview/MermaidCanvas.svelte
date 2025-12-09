@@ -13,11 +13,6 @@
 
   $: if (code && theme && layout !== undefined) {
       render();
-      /*async () => {
-          await tick(); // Wait for pending state changes
-          render();
-          console.log("");
-      }();*/
   }
 
 
