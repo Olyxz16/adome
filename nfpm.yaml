@@ -1,0 +1,29 @@
+name: "adome"
+arch: "amd64"
+platform: "linux"
+version: "${VERSION}"
+section: "utils"
+priority: "optional"
+maintainer: "Olyxz16 <cedric.sazos@tutanota.com>"
+description: "Actually Decent Offline Mermaid Editor"
+vendor: "Olyxz16"
+homepage: "https://github.com/olyxz16/adome"
+license: "MIT"
+
+contents:
+  - src: ./build/bin/adome
+    dst: /usr/bin/adome
+  - src: ./build/appicon.png
+    dst: /usr/share/icons/hicolor/512x512/apps/adome.png
+  - src: ./build/linux/adome.desktop
+    dst: /usr/share/applications/adome.desktop
+
+overrides:
+  deb:
+    depends:
+      - libgtk-3-0
+      - libwebkit2gtk-4.1-0
+  rpm:
+    depends:
+      - gtk3
+      - webkit2gtk4.1
