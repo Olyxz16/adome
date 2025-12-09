@@ -1,4 +1,5 @@
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
+import { IsDarkTheme, LoadPalettes, SavePalettes } from '../services/bridge';
 
 export interface GraphTheme {
     name: string;
@@ -19,6 +20,7 @@ export interface GraphTheme {
     nodeBorderWidth: string;
     edgeWidth: string;
     nodeRx: string;
+    layoutOptions: GraphLayoutOptions;
 }
 
 export interface GraphLayoutOptions {
@@ -76,6 +78,97 @@ export const defaultDarkTheme: GraphTheme = {
 };
 
 export const currentTheme = writable<GraphTheme>(defaultLightTheme);
+export const currentAppTheme = writable<string>('system');
+export const isDarkMode = writable<boolean>(false);
+export const userThemes = writable<GraphTheme[]>([]);
+
+let mediaQueryList: MediaQueryList;
+
+export function initTheme() {
+    // specific listeners for system theme changes
+    mediaQueryList = window.matchMedia('(prefers-color-scheme: dark)');
+    mediaQueryList.addEventListener('change', handleSystemThemeChange);
+
+    resolveTheme();
+    loadThemes();
+    
+    // Subscribe to app theme changes
+    currentAppTheme.subscribe(() => {
+        resolveTheme();
+    });
+}
+
+export async function loadThemes() {
+    try {
+        const json = await LoadPalettes();
+        if (json) {
+            const themes = JSON.parse(json);
+            if (Array.isArray(themes)) {
+                userThemes.set(themes);
+            }
+        }
+    } catch (e) {
+        console.error("Failed to load themes", e);
+    }
+}
+
+export async function saveThemes() {
+    try {
+        const themes = get(userThemes);
+        const json = JSON.stringify(themes);
+        await SavePalettes(json);
+    } catch (e) {
+        console.error("Failed to save themes", e);
+    }
+}
+
+export function destroyTheme() {
+    if (mediaQueryList) {
+        mediaQueryList.removeEventListener('change', handleSystemThemeChange);
+    }
+}
+
+function handleSystemThemeChange(e: MediaQueryListEvent) {
+    if (get(currentAppTheme) === 'system') {
+        resolveTheme();
+    }
+}
+
+export async function resolveTheme() {
+    const appTheme = get(currentAppTheme);
+    let dark = false;
+
+    if (appTheme === 'system') {
+        let matches = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (!matches) {
+            try {
+                // Assuming IsDarkTheme is available and works
+                matches = await IsDarkTheme();
+            } catch (e) {
+                console.error("Failed to check system theme:", e);
+            }
+        }
+        dark = matches;
+    } else {
+        dark = appTheme === 'dark';
+    }
+
+    isDarkMode.set(dark);
+    updateBodyClass(dark);
+    
+    // Unified Theme Logic
+    const newTheme = dark ? defaultDarkTheme : defaultLightTheme;
+    currentTheme.set(newTheme);
+    applyTheme(newTheme);
+}
+
+function updateBodyClass(dark: boolean) {
+    if (dark) {
+        document.body.classList.add('dark-theme');
+    } else {
+        document.body.classList.remove('dark-theme');
+    }
+}
 
 export function applyTheme(theme: GraphTheme) {
     const root = document.documentElement;

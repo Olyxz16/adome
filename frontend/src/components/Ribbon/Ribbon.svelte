@@ -1,61 +1,39 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
-
-  export let currentAppTheme: string;
-  export let currentMermaidTheme: string;
-  export let appThemes: string[];
-  export let mermaidThemes: string[];
-  export let autoRender = true;
+  import { 
+      loadFile, 
+      saveFile, 
+      requestExportSVG, 
+      requestExportPNG, 
+      triggerRender, 
+      renderingEngine,
+      layoutEngine, 
+      elkAlgorithm, 
+      autoRender 
+  } from '../../lib/stores/editor';
   
-  // ELK Integration
-  export let layoutEngine = 'mermaid'; // 'mermaid' | 'elk'
-  export let currentElkAlgorithm = 'layered';
+  import { currentAppTheme } from '../../lib/stores/theme';
+
+  const appThemes = ['light', 'dark', 'system'];
   const elkAlgorithms = ['layered', 'stress', 'mrtree', 'radial', 'force', 'disco'];
 
-  const dispatch = createEventDispatcher();
-
   function handleLoad() {
-    dispatch('load');
+    loadFile();
   }
 
   function handleSave() {
-    dispatch('save');
+    saveFile();
   }
   
-  function handleExportMMD() {
-      dispatch('exportMMD');
-  }
-
   function handleExportSVG() {
-      dispatch('exportSVG');
+      requestExportSVG();
   }
 
   function handleExportPNG() {
-      dispatch('exportPNG');
+      requestExportPNG();
   }
 
   function render() {
-    dispatch('render');
-  }
-  
-  function handleAutoRenderChange() {
-    dispatch('toggleAutoRender', autoRender);
-  }
-
-  function handleAppThemeChange() {
-    dispatch('appThemeChange', currentAppTheme);
-  }
-
-  function handleMermaidThemeChange() {
-    dispatch('mermaidThemeChange', currentMermaidTheme);
-  }
-  
-  function handleLayoutEngineChange() {
-      dispatch('layoutEngineChange', layoutEngine);
-  }
-
-  function handleElkAlgorithmChange() {
-      dispatch('elkAlgorithmChange', currentElkAlgorithm);
+    triggerRender.update(n => n + 1);
   }
 </script>
 
@@ -84,10 +62,6 @@
     <div class="ribbon-group">
       <div class="group-title">Export</div>
       <div class="group-content">
-        <div class="ribbon-btn" role="button" tabindex="0" on:click={handleExportMMD} on:keypress={(e) => e.key === 'Enter' && handleExportMMD()}>
-          <span class="icon">📄</span>
-          <span class="label">MMD</span>
-        </div>
         <div class="ribbon-btn" role="button" tabindex="0" on:click={handleExportSVG} on:keypress={(e) => e.key === 'Enter' && handleExportSVG()}>
           <span class="icon">🖼️</span>
           <span class="label">SVG</span>
@@ -102,36 +76,46 @@
     <div class="ribbon-separator"></div>
 
     <div class="ribbon-group">
-      <div class="group-title">Diagram</div>
+      <div class="group-title">Engine</div>
       <div class="group-content">
-        <div class="ribbon-btn" role="button" tabindex="0" on:click={render} on:keypress={(e) => e.key === 'Enter' && render()}>
-          <span class="icon">🔄</span>
-          <span class="label">Render</span>
-        </div>
-        
-        <div class="control-box" style="margin-left: 10px;">
-          <label for="engine-select">Engine</label>
-          <select id="engine-select" bind:value={layoutEngine} on:change={handleLayoutEngineChange}>
+        <div class="control-box">
+          <label for="engine-select">Rendering</label>
+          <select id="engine-select" bind:value={$renderingEngine}>
             <option value="mermaid">Mermaid</option>
-            <option value="elk">ELK (Exp)</option>
+            <option value="d2">D2</option>
           </select>
         </div>
         
-        {#if layoutEngine === 'elk'}
+        {#if $renderingEngine === 'mermaid'}
             <div class="control-box" style="margin-left: 10px;">
-              <label for="elk-algo-select">Algorithm</label>
-              <select id="elk-algo-select" bind:value={currentElkAlgorithm} on:change={handleElkAlgorithmChange}>
-                {#each elkAlgorithms as algo}
-                  <option value={algo}>{algo}</option>
-                {/each}
+              <label for="layout-select">Layout</label>
+              <select id="layout-select" bind:value={$layoutEngine}>
+                <option value="default">Default</option>
+                <option value="elk">ELK</option>
               </select>
             </div>
+            
+            {#if $layoutEngine === 'elk'}
+                <div class="control-box" style="margin-left: 10px;">
+                  <label for="elk-algo-select">Algorithm</label>
+                  <select id="elk-algo-select" bind:value={$elkAlgorithm}>
+                    {#each elkAlgorithms as algo}
+                      <option value={algo}>{algo}</option>
+                    {/each}
+                  </select>
+                </div>
+            {/if}
         {/if}
+
+        <div class="ribbon-btn" role="button" tabindex="0" on:click={render} on:keypress={(e) => e.key === 'Enter' && render()} style="margin-left: 10px;">
+          <span class="icon">🔄</span>
+          <span class="label">Render</span>
+        </div>
 
         <div class="control-box" style="margin-left: 10px; justify-content: center;">
              <label style="display: flex; align-items: center; cursor: pointer;">
-                <input type="checkbox" bind:checked={autoRender} on:change={handleAutoRenderChange} style="margin-right: 5px;">
-                Auto-Sync
+                <input type="checkbox" bind:checked={$autoRender} style="margin-right: 5px;">
+                Auto
              </label>
         </div>
       </div>
@@ -143,17 +127,9 @@
       <div class="group-title">Appearance</div>
       <div class="group-content">
         <div class="control-box">
-          <label for="app-theme-select">App Mode</label>
-          <select id="app-theme-select" bind:value={currentAppTheme} on:change={handleAppThemeChange}>
+          <label for="app-theme-select">Theme</label>
+          <select id="app-theme-select" bind:value={$currentAppTheme}>
             {#each appThemes as theme}
-              <option value={theme}>{theme}</option>
-            {/each}
-          </select>
-        </div>
-        <div class="control-box" style="margin-left: 10px;">
-          <label for="mermaid-theme-select">Diagram Theme</label>
-          <select id="mermaid-theme-select" bind:value={currentMermaidTheme} on:change={handleMermaidThemeChange}>
-            {#each mermaidThemes as theme}
               <option value={theme}>{theme}</option>
             {/each}
           </select>
@@ -163,6 +139,7 @@
 
   </div>
 </div>
+
 
 <style>
   /* Ribbon Styles */

@@ -18,6 +18,10 @@ body {
     background-color: var(--bg-app);
     transition: background-color 0.3s, color 0.3s;
     overflow: hidden; /* Prevent body scroll */
+    
+    /* Ensure the app is interactive and not treated as a drag handle by default */
+    --wails-draggable: no-drag;
+    cursor: default;
 }
 
 @font-face {
@@ -34,6 +38,9 @@ body {
     overflow: hidden;
     display: flex; 
     flex-direction: column;
+    /* Ensure app creates a stacking context */
+    position: relative;
+    z-index: 0;
 }
 
 /* CSS Variables for Theming */

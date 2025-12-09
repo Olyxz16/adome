@@ -1,0 +1,60 @@
+<script lang="ts">
+  import { createEventDispatcher, tick } from 'svelte';
+  import { renderMermaid } from '../../lib/services/mermaid';
+  import type { GraphTheme } from '../../lib/stores/theme';
+
+  export let code: string;
+  export let theme: GraphTheme;
+  export let layout: string = '';
+  
+  let container: HTMLElement;
+  let error = '';
+  const dispatch = createEventDispatcher();
+
+  $: if (code && theme && layout !== undefined) {
+      render();
+      /*async () => {
+          await tick(); // Wait for pending state changes
+          render();
+          console.log("");
+      }();*/
+  }
+
+
+  async function render() {
+      if (!container || !code) return;
+      try {
+          const id = 'mermaid-' + Math.random().toString(36).substr(2, 9);
+          const svg = await renderMermaid(id, code, theme, layout);
+          if (container) container.innerHTML = svg;
+          error = '';
+          dispatch('rendered', { svg });
+      } catch (e: any) {
+          console.error(e);
+          error = e.message || 'Error rendering Mermaid';
+          dispatch('error', e);
+      }
+  }
+</script>
+
+<div class="canvas-root" bind:this={container}></div>
+{#if error}
+  <div class="error-overlay">{error}</div>
+{/if}
+
+<style>
+    .canvas-root {
+        display: inline-block; /* Helps with width calculation */
+    }
+    .error-overlay {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        background: rgba(255, 200, 200, 0.9);
+        color: #d8000c;
+        border: 1px solid #d8000c;
+        padding: 5px 10px;
+        border-radius: 4px;
+        pointer-events: none;
+    }
+</style>
