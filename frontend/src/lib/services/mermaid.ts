@@ -37,7 +37,6 @@ export function initMermaid() {
 }
 
 export async function renderMermaid(id: string, code: string, theme: GraphTheme, elkAlgorithm: string = ''): Promise<string> {
-    console.log(`[MermaidService] renderMermaid called for ID: ${id}, code: ${code.substring(0, 50)}...`);
     if (!isInitialized) {
         initMermaid();
     }

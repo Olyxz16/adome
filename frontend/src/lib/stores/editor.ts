@@ -75,7 +75,6 @@ export async function saveFile() {
 }
 
 export async function compileD2(content: string, themeID: number): Promise<string> {
-    console.log(`[editor.ts] compileD2 called with content: ${content.substring(0, 50)}...`);
     try {
         console.log(`[Store] Calling CompileD2 via Wails. Content len: ${content.length}, ThemeID: ${themeID}`);
         

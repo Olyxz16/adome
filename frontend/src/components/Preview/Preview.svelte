@@ -22,17 +22,6 @@
   $: activeStore = contentStores[$renderingEngine];
   // Reactively get the content from the active store
   $: activeContent = activeStore ? $activeStore : '';
-  $: {
-    console.log('[Preview] activeContent changed:', activeContent.substring(0, 50) + '...');
-  }
-  $: {
-    if (activeStore) {
-        let unsubscribe = activeStore.subscribe(value => {
-            console.log('[Preview] Active Content Store updated:', value.substring(0, 50) + '...');
-        });
-        // Svelte will handle unsubscribing when activeStore changes
-    }
-  }
 
   let debouncedContent = activeContent;
   let debounceTimer: any;
@@ -43,13 +32,11 @@
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
           debouncedContent = content;
-          console.log('[Preview] debouncedContent updated:', debouncedContent.substring(0, 50) + '...');
       }, 500);
   }
 
   // Force render logic
   triggerRender.subscribe(() => {
-      console.log('[Preview] triggerRender fired!');
       const engine = get(renderingEngine);
       const store = contentStores[engine];
       debouncedContent = store ? get(store) : '';

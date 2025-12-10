@@ -6,8 +6,16 @@ export function LoadPalettes() {
   return window['go']['config']['Service']['LoadPalettes']();
 }
 
+export function LoadPreferences() {
+  return window['go']['config']['Service']['LoadPreferences']();
+}
+
 export function SavePalettes(arg1) {
   return window['go']['config']['Service']['SavePalettes'](arg1);
+}
+
+export function SavePreferences(arg1) {
+  return window['go']['config']['Service']['SavePreferences'](arg1);
 }
 
 export function Startup(arg1) {

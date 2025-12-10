@@ -20,6 +20,14 @@ func (s *Service) Startup(ctx context.Context) {
 	s.ctx = ctx
 }
 
+func (s *Service) LoadFileByPath(filePath string) (string, error) {
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+	return string(content), nil
+}
+
 func (s *Service) LoadFile() (string, error) {
 	path, err := runtime.OpenFileDialog(s.ctx, runtime.OpenDialogOptions{
 		Title: "Open Diagram",

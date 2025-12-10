@@ -7,53 +7,113 @@ import (
 	"testing"
 )
 
-func TestService_SaveAndLoadPalettes(t *testing.T) {
-	// Create a temporary directory for config
-	tmpDir, err := os.MkdirTemp("", "adome-config-test")
+func TestSaveLoadPreferences(t *testing.T) {
+	// Create a temporary config directory for testing
+	tempDir, err := os.MkdirTemp("", "config_test")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer os.RemoveAll(tempDir) // Clean up after test
 
-	// Mock UserConfigDir via environment variable
-	// Note: This works on Linux/Unix if os.UserConfigDir respects XDG_CONFIG_HOME.
-	// For cross-platform reliability, we might need a different approach,
-	// but for this environment it should suffice.
-	t.Setenv("XDG_CONFIG_HOME", tmpDir)
-    // Also set APPDATA for Windows just in case logic changes or test runs there
-    t.Setenv("APPDATA", tmpDir)
+	service := NewService()
+	service.configDir = filepath.Join(tempDir, "DiagramEditor")
+	_ = os.MkdirAll(service.configDir, 0755)
 
-	svc := NewService()
-	svc.Startup(context.Background())
-
-	// Verify the directory was created
-	expectedDir := filepath.Join(tmpDir, "DiagramEditor")
-	if _, err := os.Stat(expectedDir); os.IsNotExist(err) {
-		t.Errorf("Config directory was not created at %s", expectedDir)
+	// Test case 1: Save and load a preference
+	testPrefs := Preferences{
+		ActiveThemeName: "oceanic",
 	}
 
-	// Test LoadPalettes when file doesn't exist
-	initialPalettes, err := svc.LoadPalettes()
+	err = service.SavePreferences(testPrefs)
 	if err != nil {
-		t.Errorf("LoadPalettes failed on empty: %v", err)
-	}
-	if initialPalettes != "[]" {
-		t.Errorf("Expected '[]', got '%s'", initialPalettes)
+		t.Fatalf("SavePreferences failed: %v", err)
 	}
 
-	// Test SavePalettes
-	testData := `[{"name":"test"}]`
-	err = svc.SavePalettes(testData)
+	loadedPrefs, err := service.LoadPreferences()
 	if err != nil {
-		t.Errorf("SavePalettes failed: %v", err)
+		t.Fatalf("LoadPreferences failed: %v", err)
 	}
 
-	// Test LoadPalettes again
-	loadedPalettes, err := svc.LoadPalettes()
-	if err != nil {
-		t.Errorf("LoadPalettes failed after save: %v", err)
+	if loadedPrefs.ActiveThemeName != testPrefs.ActiveThemeName {
+		t.Errorf("Expected ActiveThemeName %s, got %s", testPrefs.ActiveThemeName, loadedPrefs.ActiveThemeName)
 	}
-	if loadedPalettes != testData {
-		t.Errorf("Expected '%s', got '%s'", testData, loadedPalettes)
+
+	// Test case 2: Load non-existent preferences (should return defaults)
+	// Remove the preferences file
+	err = os.Remove(filepath.Join(service.configDir, preferencesFileName))
+	if err != nil {
+		t.Fatalf("Failed to remove preferences file: %v", err)
+	}
+
+	loadedPrefs, err = service.LoadPreferences()
+	if err != nil {
+		t.Fatalf("LoadPreferences failed for non-existent file: %v", err)
+	}
+
+	if loadedPrefs.ActiveThemeName != "" {
+		t.Errorf("Expected default ActiveThemeName '', got %s", loadedPrefs.ActiveThemeName)
+	}
+}
+
+func TestSaveLoadPalettes(t *testing.T) {
+	// Create a temporary config directory for testing
+	tempDir, err := os.MkdirTemp("", "palette_test")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir) // Clean up after test
+
+	service := NewService()
+	service.configDir = filepath.Join(tempDir, "DiagramEditor")
+	_ = os.MkdirAll(service.configDir, 0755)
+
+	testPalettes := `[{"name":"Custom1","isDark":false}]`
+
+	err = service.SavePalettes(testPalettes)
+	if err != nil {
+		t.Fatalf("SavePalettes failed: %v", err)
+	}
+
+	loadedPalettes, err := service.LoadPalettes()
+	if err != nil {
+		t.Fatalf("LoadPalettes failed: %v", err)
+	}
+
+	if loadedPalettes != testPalettes {
+		t.Errorf("Expected palettes %s, got %s", testPalettes, loadedPalettes)
+	}
+
+	// Test case 2: Load non-existent palettes (should return "[]")
+	// Remove the palettes file
+	err = os.Remove(filepath.Join(service.configDir, "user-palettes.json"))
+	if err != nil {
+		t.Fatalf("Failed to remove palettes file: %v", err)
+	}
+
+	loadedPalettes, err = service.LoadPalettes()
+	if err != nil {
+		t.Fatalf("LoadPalettes failed for non-existent file: %v", err)
+	}
+
+	if loadedPalettes != "[]" {
+		t.Errorf("Expected default palettes \"[]\", got %s", loadedPalettes)
+	}
+}
+
+func TestStartup(t *testing.T) {
+	service := NewService()
+	service.Startup(context.Background())
+
+	if service.configDir == "" {
+		t.Errorf("configDir should not be empty after Startup")
+	}
+
+	// Verify that the directory was created
+	info, err := os.Stat(service.configDir)
+	if err != nil {
+		t.Fatalf("Config directory %s not found: %v", service.configDir, err)
+	}
+	if !info.IsDir() {
+		t.Errorf("Config directory %s is not a directory", service.configDir)
 	}
 }

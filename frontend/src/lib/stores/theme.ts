@@ -1,5 +1,5 @@
 import { writable, get } from 'svelte/store';
-import { IsDarkTheme, LoadPalettes, SavePalettes } from '../services/bridge';
+import { IsDarkTheme, LoadPalettes, SavePalettes, LoadPreferences, SavePreferences, type Preferences } from '../services/bridge';
 
 export interface GraphTheme {
     name: string;
@@ -115,8 +115,6 @@ export async function resolveTheme() {
     }
 }
 
-// ... (initTheme function and other subscribers)
-
 export function initTheme() {
     // specific listeners for system theme changes
     mediaQueryList = window.matchMedia('(prefers-color-scheme: dark)');
@@ -124,6 +122,7 @@ export function initTheme() {
 
     resolveTheme();
     loadThemes();
+    loadActiveThemePreference(); // Load theme preference on startup
     
     // Subscribe to app theme changes - just call resolveTheme, guard is inside
     currentAppTheme.subscribe(async () => {
@@ -134,6 +133,7 @@ export function initTheme() {
     currentTheme.subscribe((theme) => {
         if (theme) {
             applyTheme(theme);
+            saveActiveThemePreference(); // Save preference when theme changes
         }
     });
 
@@ -143,6 +143,39 @@ export function initTheme() {
     isDarkMode.subscribe((isDark) => {
         currentTheme.update(theme => ({ ...theme, isDark: isDark }));
     });
+}
+
+async function loadActiveThemePreference() {
+    try {
+        const prefs: Preferences = await LoadPreferences();
+        if (prefs && prefs.activeThemeName) {
+            const theme = findThemeByName(prefs.activeThemeName);
+            if (theme) {
+                currentTheme.set(theme);
+            }
+        }
+    } catch (e) {
+        console.error("Failed to load active theme preference:", e);
+    }
+}
+
+async function saveActiveThemePreference() {
+    try {
+        const theme = get(currentTheme);
+        const prefs: Preferences = await LoadPreferences(); // Load existing preferences
+        prefs.activeThemeName = theme.name; // Update active theme name
+        await SavePreferences(prefs);
+    } catch (e) {
+        console.error("Failed to save active theme preference:", e);
+    }
+}
+
+function findThemeByName(name: string): GraphTheme | undefined {
+    if (name === defaultLightTheme.name) return defaultLightTheme;
+    if (name === defaultDarkTheme.name) return defaultDarkTheme;
+    
+    const userThemesArr = get(userThemes);
+    return userThemesArr.find(t => t.name === name);
 }
 
 export async function loadThemes() {

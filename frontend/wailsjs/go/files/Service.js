@@ -14,6 +14,10 @@ export function LoadFile() {
   return window['go']['files']['Service']['LoadFile']();
 }
 
+export function LoadFileByPath(arg1) {
+  return window['go']['files']['Service']['LoadFileByPath'](arg1);
+}
+
 export function SaveFile(arg1) {
   return window['go']['files']['Service']['SaveFile'](arg1);
 }

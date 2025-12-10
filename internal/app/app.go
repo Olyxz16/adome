@@ -11,10 +11,11 @@ import (
 
 // App struct
 type App struct {
-	ctx    context.Context
-	d2     *d2.Service
-	config *config.Service
-	files  *files.Service
+	ctx           context.Context
+	d2            *d2.Service
+	config        *config.Service
+	files         *files.Service
+	startupFilePath string // New field to store the file path passed via CLI
 }
 
 // NewApp creates a new App application struct
@@ -24,6 +25,18 @@ func NewApp(d2 *d2.Service, config *config.Service, files *files.Service) *App {
 		config: config,
 		files:  files,
 	}
+}
+
+// SetStartupFilePath sets the path to the file passed via CLI.
+// This is called from the main package during application initialization.
+func (a *App) SetStartupFilePath(path string) {
+	a.startupFilePath = path
+}
+
+// GetStartupFilePath returns the path to the file passed via CLI,
+// allowing the frontend to access it.
+func (a *App) GetStartupFilePath() string {
+	return a.startupFilePath
 }
 
 // Startup is called when the app starts. The context is saved
