@@ -25,11 +25,16 @@ func (s *Service) Startup(ctx context.Context) {
 	s.ctx = ctx
 }
 
-func (s *Service) Compile(input string, themeID int64) (string, error) {
+func (s *Service) Compile(input string, themeID int64, backgroundColor string) (string, error) {
 	// Initialize logger to avoid "missing slog.Logger in context" warning
 	l := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	ctx := d2log.With(context.Background(), l)
 	
+	if backgroundColor != "" {
+		// Prepend the background color to the D2 input
+		input = "style.fill: \"" + backgroundColor + "\"\n" + input
+	}
+
 	ruler, err := textmeasure.NewRuler()
 	if err != nil {
 		return "", err

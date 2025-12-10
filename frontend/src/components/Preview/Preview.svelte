@@ -203,6 +203,8 @@
       position: absolute;
       top: 0; left: 0;
       transform-origin: 0 0;
+      width: 100%; /* Make it fill the parent */
+      height: 100%; /* Make it fill the parent */
   }
   .fit-btn {
     position: absolute;

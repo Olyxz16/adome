@@ -110,3 +110,8 @@ export async function renderMermaid(id: string, code: string, theme: GraphTheme,
         throw error; // <-- Corrected: Re-throw error after logging
     }
 }
+
+export function resetMermaidStateForTesting() {
+    isInitialized = false;
+    lastThemeName = '';
+}

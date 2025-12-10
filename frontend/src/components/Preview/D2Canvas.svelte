@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onMount, tick } from 'svelte';
   import { compileD2 } from '../../lib/stores/editor';
   import { isDarkMode } from '../../lib/stores/theme';
 
@@ -14,31 +14,44 @@
   }
 
   async function render() {
-      if (!container) {
-          console.warn("D2Canvas: Container not ready");
-          return;
-      }
-      if (!code) {
-          console.warn("D2Canvas: No code to render");
-          return;
-      }
+      if (!container) return;
+      if (!code) return;
       try {
-          // 0 = Default Light, 200 = Dark Mode
           const themeID = $isDarkMode ? 200 : 0;
-          console.log(`D2Canvas: Requesting compile. ThemeID: ${themeID}, Code length: ${code.length}`);
-          
           const svg = await compileD2(code, themeID);
           
-          console.log(`D2Canvas: Received SVG. Length: ${svg?.length}`);
-          
-          if (container) {
-              container.innerHTML = svg;
-              console.log("D2Canvas: Updated container.innerHTML");
+          if (container && svg) {
+              // Strip XML declaration
+              const cleanSvg = svg.replace(/<\?xml.*?\?>/g, '');
+              container.innerHTML = cleanSvg;
+              
+              // Check for nested SVG and unwrap
+              const outerSvg = container.querySelector('svg');
+              if (outerSvg) {
+                  const innerSvg = outerSvg.querySelector('svg');
+                  if (innerSvg) {
+                      console.log("D2Canvas: Nested SVG detected. Unwrapping...");
+                      // Move inner SVG to container
+                      container.innerHTML = innerSvg.outerHTML;
+                  }
+              }
+              
+              await tick(); // Wait for DOM update
+              
+              // Update debug info
+              const rect = container.getBoundingClientRect();
+              debugInfo = `
+                  SVG Len: ${svg.length}
+                  Clean SVG Len: ${cleanSvg.length}
+                  Container: ${Math.round(rect.width)}x${Math.round(rect.height)}
+                  Child Nodes: ${container.childNodes.length}
+                  First Child: ${container.firstElementChild?.tagName}
+                  Inner HTML Len: ${container.innerHTML.length}
+              `.trim();
           }
           error = '';
           dispatch('rendered', { svg });
       } catch (e: any) {
-          console.error("D2Canvas: Render Error:", e);
           error = e.message || 'Error rendering D2';
           dispatch('error', e);
       }
@@ -55,11 +68,14 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        min-width: 100px;
-        min-height: 100px;
+        width: 100%;
+        height: 100%;
+        min-width: 0;
+        min-height: 0;
+        overflow: auto;
     }
-    /* Force SVG to display correctly */
     .canvas-root :global(svg) {
+        display: block;
         max-width: 100%;
         height: auto;
     }

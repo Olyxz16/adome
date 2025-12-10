@@ -1,5 +1,6 @@
 import { writable, get } from 'svelte/store';
 import { LoadFile, SaveFile, CompileD2 } from '../services/bridge';
+import { currentTheme } from './theme'; // Import currentTheme
 
 export const editorContent = writable<string>(`graph TD
     A[Christmas] -->|Get money| B(Go shopping)
@@ -54,7 +55,13 @@ export async function saveFile() {
 export async function compileD2(content: string, themeID: number): Promise<string> {
     try {
         console.log(`[Store] Calling CompileD2 via Wails. Content len: ${content.length}, ThemeID: ${themeID}`);
-        const result = await CompileD2(content, themeID);
+        
+        // Pass "transparent" so D2 doesn't render a background rect. 
+        // We rely on the app's CSS background for the preview, 
+        // which avoids rendering issues with root rects in some webviews.
+        const themeBackground = "transparent";
+
+        const result = await CompileD2(content, themeID, themeBackground);
         console.log(`[Store] Wails CompileD2 returned. Result len: ${result?.length}`);
         return result;
     } catch (e) {
@@ -70,3 +77,4 @@ export function requestExportSVG() {
 export function requestExportPNG() {
     editorCommand.set({ type: 'export-png', timestamp: Date.now() });
 }
+
