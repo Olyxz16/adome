@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { editorContent, renderingEngine, layoutEngine, elkAlgorithm, editorCommand, type CommandType, triggerRender } from '../../lib/stores/editor';
+  import { get } from 'svelte/store';
+  import { contentStores, renderingEngine, layoutEngine, elkAlgorithm, editorCommand, type CommandType, triggerRender } from '../../lib/stores/editor';
   import { currentTheme } from '../../lib/stores/theme';
   import { ExportSVG, ExportPNG } from '../../lib/services/bridge';
   
@@ -17,21 +18,41 @@
   let startX = 0;
   let startY = 0;
 
-  let debouncedContent = $editorContent;
+  // Reactively get the content from the active store
+  $: activeStore = contentStores[$renderingEngine];
+  // Reactively get the content from the active store
+  $: activeContent = activeStore ? $activeStore : '';
+  $: {
+    console.log('[Preview] activeContent changed:', activeContent.substring(0, 50) + '...');
+  }
+  $: {
+    if (activeStore) {
+        let unsubscribe = activeStore.subscribe(value => {
+            console.log('[Preview] Active Content Store updated:', value.substring(0, 50) + '...');
+        });
+        // Svelte will handle unsubscribing when activeStore changes
+    }
+  }
+
+  let debouncedContent = activeContent;
   let debounceTimer: any;
 
   // Debounce logic
   $: {
-      const content = $editorContent;
+      const content = activeContent;
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
           debouncedContent = content;
+          console.log('[Preview] debouncedContent updated:', debouncedContent.substring(0, 50) + '...');
       }, 500);
   }
 
   // Force render logic
   triggerRender.subscribe(() => {
-      debouncedContent = $editorContent;
+      console.log('[Preview] triggerRender fired!');
+      const engine = get(renderingEngine);
+      const store = contentStores[engine];
+      debouncedContent = store ? get(store) : '';
   });
 
   // Export Logic

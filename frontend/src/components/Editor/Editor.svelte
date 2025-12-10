@@ -1,5 +1,8 @@
 <script lang="ts">
-  import { editorContent, triggerRender } from '../../lib/stores/editor';
+  import { contentStores, renderingEngine, triggerRender } from '../../lib/stores/editor';
+
+  // Reactively select the store based on the engine
+  $: activeStore = contentStores[$renderingEngine];
 
   function handleKeydown(e: KeyboardEvent) {
     if (e.shiftKey && e.key === 'Enter') {
@@ -10,12 +13,16 @@
 </script>
 
 <div class="editor-pane">
-  <textarea 
-    bind:value={$editorContent} 
-    on:keydown={handleKeydown} 
-    placeholder="Enter Mermaid or D2 code here..."
-    spellcheck="false"
-  ></textarea>
+  {#if activeStore}
+    <textarea 
+      bind:value={$activeStore} 
+      on:keydown={handleKeydown} 
+      placeholder={`Enter ${$renderingEngine} code here...`}
+      spellcheck="false"
+    ></textarea>
+  {:else}
+    <div class="error-msg">Unknown engine: {$renderingEngine}</div>
+  {/if}
 </div>
 
 <style>

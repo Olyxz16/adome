@@ -6,7 +6,8 @@
   export let code: string;
   
   let container: HTMLElement;
-  let error = '';
+  let error = ''; // Kept for internal logging/dispatch, but not displayed
+  let debugInfo = ''; 
   const dispatch = createEventDispatcher();
 
   $: if (container && code !== undefined && $isDarkMode !== undefined) {
@@ -15,10 +16,17 @@
 
   async function render() {
       if (!container) return;
-      if (!code) return;
+      console.log('[D2Canvas] Initiating D2 render...');
+      error = ''; // For internal logging/dispatch
+
+      if (!code) { // Handle empty code specifically
+          container.innerHTML = ''; // Clear previous SVG if code is empty
+          return; // Do nothing else
+      }
+
       try {
           const themeID = $isDarkMode ? 200 : 0;
-          const svg = await compileD2(code, themeID);
+          const svg = await compileD2(code, themeID); // This will return SVG on success
           
           if (container && svg) {
               // Strip XML declaration
@@ -48,20 +56,23 @@
                   First Child: ${container.firstElementChild?.tagName}
                   Inner HTML Len: ${container.innerHTML.length}
               `.trim();
+          } else {
+            // If compileD2 succeeded but returned empty SVG, or container is null
+            container.innerHTML = ''; // Clear content
           }
-          error = '';
+          error = ''; // Clear error on success
           dispatch('rendered', { svg });
       } catch (e: any) {
           error = e.message || 'Error rendering D2';
           dispatch('error', e);
+          container.innerHTML = ''; // Clear content on error
+      } finally {
+          // No loading state to manage
       }
   }
 </script>
 
 <div class="canvas-root" bind:this={container}></div>
-{#if error}
-  <div class="error-overlay">{error}</div>
-{/if}
 
 <style>
     .canvas-root {
@@ -79,15 +90,6 @@
         max-width: 100%;
         height: auto;
     }
-    .error-overlay {
-        position: fixed;
-        top: 10px;
-        left: 10px;
-        background: rgba(255, 200, 200, 0.9);
-        color: #d8000c;
-        border: 1px solid #d8000c;
-        padding: 5px 10px;
-        border-radius: 4px;
-        pointer-events: none;
-    }
+    /* Removed error-overlay styling and usage from template */
+    /* Removed loading-overlay styling and usage from template */
 </style>

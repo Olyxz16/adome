@@ -1,14 +1,24 @@
-import { writable, get } from 'svelte/store';
+import { writable, get, type Writable } from 'svelte/store';
 import { LoadFile, SaveFile, CompileD2 } from '../services/bridge';
 import { currentTheme } from './theme'; // Import currentTheme
 
-export const editorContent = writable<string>(`graph TD
+const DEFAULT_MERMAID = `graph TD
     A[Christmas] -->|Get money| B(Go shopping)
     B --> C{Let me think}
     C -->|One| D[Laptop]
     C -->|Two| E[iPhone]
     C -->|Three| F[fa:fa-car Car]
-`);
+`;
+
+const DEFAULT_D2 = `direction: right
+A -> B: Hello World
+`;
+
+// Registry of content stores for each engine
+export const contentStores: Record<string, Writable<string>> = {
+    mermaid: writable<string>(DEFAULT_MERMAID),
+    d2: writable<string>(DEFAULT_D2)
+};
 
 // 'mermaid' | 'd2'
 export const renderingEngine = writable<string>('mermaid');
@@ -33,9 +43,15 @@ export async function loadFile() {
     try {
         const content = await LoadFile();
         if (content) {
-            editorContent.set(content);
-            // Trigger a render after load
-            triggerRender.update(n => n + 1);
+            const engine = get(renderingEngine);
+            const store = contentStores[engine];
+            if (store) {
+                store.set(content);
+                // Trigger a render after load
+                triggerRender.update(n => n + 1);
+            } else {
+                console.error(`No content store found for engine: ${engine}`);
+            }
         }
     } catch (e) {
         console.error("Failed to load file:", e);
@@ -44,15 +60,22 @@ export async function loadFile() {
 
 export async function saveFile() {
     try {
-        const content = get(editorContent);
-        const msg = await SaveFile(content);
-        console.log(msg);
+        const engine = get(renderingEngine);
+        const store = contentStores[engine];
+        if (store) {
+            const content = get(store);
+            const msg = await SaveFile(content);
+            console.log(msg);
+        } else {
+            console.error(`No content store found for engine: ${engine}`);
+        }
     } catch (e) {
         console.error("Failed to save file:", e);
     }
 }
 
 export async function compileD2(content: string, themeID: number): Promise<string> {
+    console.log(`[editor.ts] compileD2 called with content: ${content.substring(0, 50)}...`);
     try {
         console.log(`[Store] Calling CompileD2 via Wails. Content len: ${content.length}, ThemeID: ${themeID}`);
         
@@ -77,4 +100,3 @@ export function requestExportSVG() {
 export function requestExportPNG() {
     editorCommand.set({ type: 'export-png', timestamp: Date.now() });
 }
-

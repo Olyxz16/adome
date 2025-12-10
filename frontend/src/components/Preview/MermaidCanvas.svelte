@@ -18,6 +18,7 @@
 
   async function render() {
       if (!container || !code) return;
+      console.log('[MermaidCanvas] Initiating Mermaid render...');
       try {
           const id = 'mermaid-' + Math.random().toString(36).substr(2, 9);
           const svg = await renderMermaid(id, code, theme, layout);

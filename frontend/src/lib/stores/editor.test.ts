@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
-import { editorContent, loadFile, saveFile, compileD2, editorCommand } from './editor';
+import { contentStores, renderingEngine, loadFile, saveFile, compileD2, editorCommand } from './editor';
 import * as bridge from '../services/bridge';
 
 // Mock the bridge module
@@ -13,18 +13,34 @@ vi.mock('../services/bridge', () => ({
 describe('Editor Store', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        editorContent.set('');
+        contentStores['mermaid'].set('');
+        contentStores['d2'].set('');
+        renderingEngine.set('mermaid');
         editorCommand.set({ type: 'none', timestamp: 0 });
     });
 
-    it('loadFile updates editorContent on success', async () => {
+    it('loadFile updates mermaid store when engine is mermaid', async () => {
+        renderingEngine.set('mermaid');
         const mockContent = 'graph TD; A-->B;';
         (bridge.LoadFile as any).mockResolvedValue(mockContent);
 
         await loadFile();
 
         expect(bridge.LoadFile).toHaveBeenCalled();
-        expect(get(editorContent)).toBe(mockContent);
+        expect(get(contentStores['mermaid'])).toBe(mockContent);
+        expect(get(contentStores['d2'])).toBe('');
+    });
+
+    it('loadFile updates d2 store when engine is d2', async () => {
+        renderingEngine.set('d2');
+        const mockContent = 'x -> y';
+        (bridge.LoadFile as any).mockResolvedValue(mockContent);
+
+        await loadFile();
+
+        expect(bridge.LoadFile).toHaveBeenCalled();
+        expect(get(contentStores['d2'])).toBe(mockContent);
+        expect(get(contentStores['mermaid'])).toBe('');
     });
 
     it('loadFile does nothing if cancelled (returns empty)', async () => {
@@ -33,12 +49,25 @@ describe('Editor Store', () => {
         await loadFile();
 
         expect(bridge.LoadFile).toHaveBeenCalled();
-        expect(get(editorContent)).toBe('');
+        expect(get(contentStores['mermaid'])).toBe('');
+        expect(get(contentStores['d2'])).toBe('');
     });
 
-    it('saveFile calls SaveFile with current content', async () => {
-        const content = 'some content';
-        editorContent.set(content);
+    it('saveFile calls SaveFile with mermaid content when engine is mermaid', async () => {
+        renderingEngine.set('mermaid');
+        const content = 'mermaid content';
+        contentStores['mermaid'].set(content);
+        (bridge.SaveFile as any).mockResolvedValue('Saved');
+
+        await saveFile();
+
+        expect(bridge.SaveFile).toHaveBeenCalledWith(content);
+    });
+
+    it('saveFile calls SaveFile with d2 content when engine is d2', async () => {
+        renderingEngine.set('d2');
+        const content = 'd2 content';
+        contentStores['d2'].set(content);
         (bridge.SaveFile as any).mockResolvedValue('Saved');
 
         await saveFile();
@@ -50,24 +79,13 @@ describe('Editor Store', () => {
         const content = 'x -> y';
         const themeID = 1;
         const mockSvg = '<svg>...</svg>';
-        // Mock currentTheme in theme store? 
-        // We can't easily mock the return of `get(currentTheme)` unless we mock the store module or set the store value.
-        // But `currentTheme` is a store, so we can just set it if we import it?
-        // Wait, `editor.ts` imports `currentTheme` directly.
-        // We need to make sure `currentTheme` has a value.
         
         (bridge.CompileD2 as any).mockResolvedValue(mockSvg);
 
-        // Note: verify what background color is passed. Default mock/store value might be used.
-        // Since we didn't explicitly set the store in this test file, it uses default.
-        // Let's assume default is light theme -> #ffffff
-        
         const result = await compileD2(content, themeID);
 
-        // Expect the 3rd arg (background) to be present. 
-        // We can check if it was called with *any* string for the 3rd arg if we are unsure of the default
-        // or we can import defaultLightTheme to be sure.
         expect(bridge.CompileD2).toHaveBeenCalledWith(content, themeID, expect.any(String));
         expect(result).toBe(mockSvg);
     });
 });
+
