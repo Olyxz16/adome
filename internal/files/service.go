@@ -49,14 +49,36 @@ func (s *Service) LoadFile() (string, error) {
 	return string(content), nil
 }
 
-func (s *Service) SaveFile(content string) (string, error) {
+func (s *Service) SaveFile(content string, engine string) (string, error) {
+	println("Go Backend: SaveFile received engine:", engine)
+	defaultFilename := "diagram"
+	filters := []runtime.FileFilter{}
+
+	switch engine {
+	case "mermaid":
+		defaultFilename += ".mmd"
+		filters = []runtime.FileFilter{
+			{DisplayName: "Mermaid Files (*.mmd, *.mermaid)", Pattern: "*.mmd;*.mermaid"},
+			{DisplayName: "All Files (*.*)", Pattern: "*.*"},
+		}
+	case "d2":
+		defaultFilename += ".d2"
+		filters = []runtime.FileFilter{
+			{DisplayName: "D2 Files (*.d2)", Pattern: "*.d2"},
+			{DisplayName: "All Files (*.*)", Pattern: "*.*"},
+		}
+	default: // Fallback for unknown engine
+		defaultFilename += ".txt"
+		filters = []runtime.FileFilter{
+			{DisplayName: "Text Files (*.txt)", Pattern: "*.txt"},
+			{DisplayName: "All Files (*.*)", Pattern: "*.*"},
+		}
+	}
+
 	path, err := runtime.SaveFileDialog(s.ctx, runtime.SaveDialogOptions{
 		Title:           "Save Diagram",
-		DefaultFilename: "diagram.mmd",
-		Filters: []runtime.FileFilter{
-			{DisplayName: "Mermaid Files", Pattern: "*.mmd;*.mermaid"},
-			{DisplayName: "D2 Files", Pattern: "*.d2"},
-		},
+		DefaultFilename: defaultFilename,
+		Filters:         filters,
 	})
 	if err != nil {
 		return "", err
