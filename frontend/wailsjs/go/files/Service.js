@@ -18,8 +18,8 @@ export function LoadFileByPath(arg1) {
   return window['go']['files']['Service']['LoadFileByPath'](arg1);
 }
 
-export function SaveFile(arg1) {
-  return window['go']['files']['Service']['SaveFile'](arg1);
+export function SaveFile(arg1, arg2) {
+  return window['go']['files']['Service']['SaveFile'](arg1, arg2);
 }
 
 export function Startup(arg1) {

@@ -10,6 +10,6 @@ export function LoadFile():Promise<string>;
 
 export function LoadFileByPath(arg1:string):Promise<string>;
 
-export function SaveFile(arg1:string):Promise<string>;
+export function SaveFile(arg1:string,arg2:string):Promise<string>;
 
 export function Startup(arg1:context.Context):Promise<void>;

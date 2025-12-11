@@ -61,10 +61,11 @@ export async function loadFile() {
 export async function saveFile() {
     try {
         const engine = get(renderingEngine);
+        console.log(`[editor.ts] saveFile called. Current engine: ${engine}`);
         const store = contentStores[engine];
         if (store) {
             const content = get(store);
-            const msg = await SaveFile(content);
+            const msg = await SaveFile(content, engine); // Pass engine here
             console.log(msg);
         } else {
             console.error(`No content store found for engine: ${engine}`);

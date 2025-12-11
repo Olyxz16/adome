@@ -23,7 +23,7 @@ export const SavePreferences = Config.SavePreferences;
 
 // Files
 export const LoadFile = Files.LoadFile;
-export const SaveFile = Files.SaveFile;
+export const SaveFile = Files.SaveFile as (content: string, engine: string) => Promise<string>;
 export const LoadFileByPath = Files.LoadFileByPath;
 export const ExportSVG = Files.ExportSVG;
 export const ExportPNG = Files.ExportPNG;

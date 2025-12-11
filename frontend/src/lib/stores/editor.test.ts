@@ -61,7 +61,7 @@ describe('Editor Store', () => {
 
         await saveFile();
 
-        expect(bridge.SaveFile).toHaveBeenCalledWith(content);
+        expect(bridge.SaveFile).toHaveBeenCalledWith(content, 'mermaid');
     });
 
     it('saveFile calls SaveFile with d2 content when engine is d2', async () => {
@@ -72,7 +72,7 @@ describe('Editor Store', () => {
 
         await saveFile();
 
-        expect(bridge.SaveFile).toHaveBeenCalledWith(content);
+        expect(bridge.SaveFile).toHaveBeenCalledWith(content, 'd2');
     });
 
     it('compileD2 calls CompileD2 bridge', async () => {
