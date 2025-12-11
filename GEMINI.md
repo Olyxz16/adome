@@ -51,6 +51,7 @@ Do not add any other text or explanation. The system will automatically execute 
 **Name**: DiagramEditor (Wails)
 **Stack**: Go (Backend), Svelte + TypeScript (Frontend).
 **Core Function**: An offline, cross-platform editor for Mermaid and D2 diagrams with live preview and custom theming.
+**Roadmap**: A roadmap file is available in docs/ROADMAP.md
 
 ## UI/UX Specifications
 

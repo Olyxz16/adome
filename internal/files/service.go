@@ -49,10 +49,9 @@ func (s *Service) LoadFile() (string, error) {
 	return string(content), nil
 }
 
-func (s *Service) SaveFile(content string, engine string) (string, error) {
-	println("Go Backend: SaveFile received engine:", engine)
+func (s *Service) getFileOptions(engine string) (string, []runtime.FileFilter) {
 	defaultFilename := "diagram"
-	filters := []runtime.FileFilter{}
+	var filters []runtime.FileFilter
 
 	switch engine {
 	case "mermaid":
@@ -74,6 +73,13 @@ func (s *Service) SaveFile(content string, engine string) (string, error) {
 			{DisplayName: "All Files (*.*)", Pattern: "*.*"},
 		}
 	}
+	return defaultFilename, filters
+}
+
+func (s *Service) SaveFile(content string, engine string) (string, error) {
+	println("Go Backend: SaveFile received engine:", engine)
+	
+	defaultFilename, filters := s.getFileOptions(engine)
 
 	path, err := runtime.SaveFileDialog(s.ctx, runtime.SaveDialogOptions{
 		Title:           "Save Diagram",

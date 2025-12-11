@@ -10,7 +10,14 @@
   let debugInfo = ''; 
   const dispatch = createEventDispatcher();
 
-  $: if (container && code !== undefined && $isDarkMode !== undefined) {
+  // Trigger render on prop changes (code, isDarkMode)
+  // Intentionally excluded 'container' to avoid loops.
+  $: if (code !== undefined && $isDarkMode !== undefined) {
+      render();
+  }
+
+  function init(node: HTMLElement) {
+      container = node;
       render();
   }
 
@@ -72,7 +79,7 @@
   }
 </script>
 
-<div class="canvas-root" bind:this={container}></div>
+<div class="canvas-root" bind:this={container} use:init></div>
 
 <style>
     .canvas-root {

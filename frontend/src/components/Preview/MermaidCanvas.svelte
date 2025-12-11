@@ -11,14 +11,23 @@
   let error = '';
   const dispatch = createEventDispatcher();
 
+  // Trigger render on prop changes
+  // Note: We intentionally DO NOT include 'container' here to avoid infinite loops.
+  // The 'init' action handles the initial render when the DOM is ready.
   $: if (code && theme && layout !== undefined) {
       render();
   }
 
+  // Action to run when element is created/mounted
+  function init(node: HTMLElement) {
+      // Ensure container is set (though bind:this does this too)
+      container = node; 
+      render();
+  }
 
   async function render() {
       if (!container || !code) return;
-      console.log('[MermaidCanvas] Initiating Mermaid render...');
+      // console.log('[MermaidCanvas] Initiating Mermaid render...');
       try {
           const id = 'mermaid-' + Math.random().toString(36).substr(2, 9);
           const svg = await renderMermaid(id, code, theme, layout);
@@ -33,7 +42,7 @@
   }
 </script>
 
-<div class="canvas-root" bind:this={container}></div>
+<div class="canvas-root" bind:this={container} use:init></div>
 {#if error}
   <div class="error-overlay">{error}</div>
 {/if}

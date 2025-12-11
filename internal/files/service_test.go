@@ -37,5 +37,35 @@ func TestLoadFileByPath(t *testing.T) {
 	}
 }
 
-// Add more tests for LoadFile, SaveFile, ExportSVG, ExportPNG if desired,
-// by mocking wails runtime functions. For now, focusing on LoadFileByPath.
+func TestGetFileOptions(t *testing.T) {
+	service := NewService()
+
+	tests := []struct {
+		name             string
+		engine           string
+		expectedFilename string
+		expectedFilters  string // Just checking the pattern of the first filter for simplicity
+	}{
+		{"Mermaid", "mermaid", "diagram.mmd", "*.mmd;*.mermaid"},
+		{"D2", "d2", "diagram.d2", "*.d2"},
+		{"Unknown", "unknown", "diagram.txt", "*.txt"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			filename, filters := service.getFileOptions(tt.engine)
+
+			if filename != tt.expectedFilename {
+				t.Errorf("expected filename %s, got %s", tt.expectedFilename, filename)
+			}
+
+			if len(filters) == 0 {
+				t.Fatal("expected filters, got empty list")
+			}
+
+			if filters[0].Pattern != tt.expectedFilters {
+				t.Errorf("expected filter pattern %s, got %s", tt.expectedFilters, filters[0].Pattern)
+			}
+		})
+	}
+}
