@@ -30,6 +30,10 @@ dependencies:
   # Networking
   http: ^1.1.0
 
+  # Webview for local Mermaid rendering
+  desktop_webview_window: ^0.2.3 # Use a recent stable version
+  path: ^1.9.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

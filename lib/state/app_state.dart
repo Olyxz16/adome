@@ -55,8 +55,6 @@ class AppState extends ChangeNotifier {
   AppThemeConfig get activeThemeConfig => _activeThemeConfig;
   
   // This controls the overall App UI mode (Light/Dark/System)
-  // We can optionally sync this with the diagram theme or keep it separate.
-  // For now, we'll keep it separate but default to system.
   ThemeMode _appThemeMode = ThemeMode.system;
   ThemeMode get appThemeMode => _appThemeMode;
 
@@ -64,6 +62,12 @@ class AppState extends ChangeNotifier {
 
   AppState() {
     _compile(); // Initial compile
+  }
+
+  @override
+  void dispose() {
+    _mermaidService.dispose();
+    super.dispose();
   }
 
   // Setters

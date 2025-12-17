@@ -1,3 +1,5 @@
+import 'package:desktop_migration_app/models/app_theme_config.dart';
+import 'package:desktop_migration_app/services/theme_service.dart';
 import 'package:desktop_migration_app/state/app_state.dart';
 import 'package:desktop_migration_app/ui/components/preview.dart';
 import 'package:flutter/material.dart';
@@ -12,6 +14,9 @@ class FakeAppState extends ChangeNotifier implements AppState {
 
   @override
   RenderingEngine get engine => RenderingEngine.mermaid;
+
+  @override
+  AppThemeConfig get activeThemeConfig => ThemeService.defaultTheme;
 
   @override
   String get compiledMermaidSvg => '<svg height="100" width="100"><circle cx="50" cy="50" r="40" stroke="black" stroke-width="3" fill="red" /></svg>';

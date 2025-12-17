@@ -2,23 +2,99 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mermaid Preview</title>
+    <title>Mermaid Renderer</title>
+    <script>
+        function send(msg) {
+            fetch('/BRIDGE?msg=' + encodeURIComponent(msg)).catch(e => {});
+        }
+        function log(msg) {
+            send("LOG:" + msg);
+        }
+        window.onerror = function(message, source, lineno, colno, error) {
+            log("Global Error: " + message);
+        };
+    </script>
     <script src="mermaid.min.js"></script>
-    <style>
-        body { margin: 0; padding: 0; overflow: hidden; background-color: transparent; font-family: sans-serif; }
-        #container { width: 100%; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: auto; }
-        .mermaid { width: 100%; }
-    </style>
+    <script>
+        log("Mermaid library loaded (Local)");
+        
+        // Define render function
+        async function renderMermaid(code, config) {
+            log("renderMermaid called with length: " + (code ? code.length : 'null'));
+            try {
+                if (typeof mermaid === 'undefined') throw "Mermaid not loaded";
+                
+                if (config) mermaid.initialize(config);
+                
+                const id = 'mermaid-' + Math.round(Math.random() * 10000);
+                const result = await mermaid.render(id, code);
+                
+                // Post-process to inline styles for flutter_svg compatibility
+                const container = document.createElement('div');
+                container.style.visibility = 'hidden';
+                container.style.position = 'absolute';
+                document.body.appendChild(container);
+                container.innerHTML = result.svg;
+                
+                const svgEl = container.querySelector('svg');
+                if (svgEl) {
+                    inlineStyles(svgEl);
+                    const finalSvg = svgEl.outerHTML;
+                    document.body.removeChild(container);
+                    log("Render success! (Styles inlined)");
+                    return finalSvg;
+                }
+                document.body.removeChild(container);
+                log("Render success! (No SVG found?)");
+                return result.svg;
+            } catch (error) {
+                log("Render Error: " + error);
+                throw error;
+            }
+        }
+        
+        function inlineStyles(element) {
+            const traverse = (el) => {
+                if (el.nodeType !== 1) return; 
+                const style = window.getComputedStyle(el);
+                const props = ['fill', 'stroke', 'stroke-width', 'font-size', 'font-family', 'font-weight', 'opacity', 'text-anchor', 'dominant-baseline'];
+                
+                props.forEach(prop => {
+                    const val = style.getPropertyValue(prop);
+                    if (val && val !== 'auto' && val !== 'inherit') {
+                         el.setAttribute(prop, val);
+                    }
+                });
+                
+                // Special handling for text alignment
+                if (el.tagName.toLowerCase() === 'text') {
+                     // MERMAID FIX: Apply vertical shift to ALL text elements because Mermaid assumes centered baseline
+                     // but flutter_svg defaults to alphabetic/bottom baseline.
+                     el.setAttribute('dy', '14px'); // Sweet spot
+                     el.removeAttribute('dominant-baseline'); // Remove to avoid conflict
+                }
+                
+                Array.from(el.children).forEach(traverse);
+            };
+            traverse(element);
+        }
+
+        // Initialize
+        try {
+            if (typeof mermaid !== 'undefined') {
+                mermaid.initialize({ startOnLoad: false });
+                log("Mermaid initialized");
+            } else {
+                log("Mermaid undefined after load");
+            }
+        } catch(e) {
+            log("Init error: " + e);
+        }
+
+        send("READY");
+    </script>
 </head>
 <body>
-    <div id="container">
-        <div class="mermaid" id="mermaid-chart">
-            %%CONTENT%%
-        </div>
-    </div>
-    <script>
-        mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
-    </script>
+    <div id="container"></div>
 </body>
 </html>
