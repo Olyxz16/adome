@@ -8,8 +8,8 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Uses the Scaffold background color defined in the active App Theme (Light/Dark)
     return Scaffold(
-      backgroundColor: const Color(0xFF1E1E1E),
       body: Column(
         children: [
           const Ribbon(),
@@ -18,7 +18,7 @@ class HomeScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Expanded(child: Editor()),
-                Container(width: 1, color: Colors.grey[800]),
+                VerticalDivider(width: 1, color: Theme.of(context).dividerColor),
                 const Expanded(child: Preview()),
               ],
             ),

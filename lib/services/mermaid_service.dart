@@ -1,13 +1,14 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import '../models/app_theme_config.dart';
 
 class MermaidService {
   // Use a local mmdc executable if available
   final String _mmdcPath = 'mmdc';
 
   Future<String> compile(String content, {
-    String theme = 'neutral',
+    required AppThemeConfig config,
     String layout = 'default',
     String elkAlgorithm = 'layered',
   }) async {
@@ -26,7 +27,7 @@ class MermaidService {
       return await _compileLocal(content);
     } catch (e) {
       print('MermaidService: Local compilation failed ($e). Falling back to online.');
-      return await _compileOnline(content, theme: theme, layout: layout, elkAlgorithm: elkAlgorithm);
+      return await _compileOnline(content, config: config, layout: layout, elkAlgorithm: elkAlgorithm);
     }
   }
 
@@ -47,7 +48,7 @@ class MermaidService {
   }
 
   Future<String> _compileOnline(String content, {
-    required String theme,
+    required AppThemeConfig config,
     required String layout,
     required String elkAlgorithm,
   }) async {
@@ -58,7 +59,8 @@ class MermaidService {
     // where BASE64 is a JSON object { "code": "..." } encoded
     
     final Map<String, dynamic> mermaidConfig = {
-      'theme': theme,
+      'theme': config.mermaid.baseTheme,
+      'themeVariables': config.mermaid.variables,
       'flowchart': {
         'htmlLabels': false,
         'defaultRenderer': layout == 'elk' ? 'elk' : 'dagre',
@@ -83,13 +85,13 @@ class MermaidService {
     
     final response = await http.get(url);
     if (response.statusCode == 200) {
-      return _processSvg(response.body);
+      return _processSvg(response.body, config.colors);
     } else {
       throw Exception('Online compilation failed: ${response.statusCode}');
     }
   }
 
-  String _processSvg(String svg) {
+  String _processSvg(String svg, ThemeColors colors) {
     print('MermaidService: Raw SVG contains "foreignObject": ${svg.contains('foreignObject')}');
     
     var processed = svg;
@@ -105,18 +107,42 @@ class MermaidService {
     processed = processed.replaceAll(RegExp(r'<\/?switch[^>]*>'), '');
 
     // 2. Inject default styles for shapes (Rect, Polygon, Circle, Ellipse)
-    const shapeStyle = ' fill="#ffffff" stroke="#333333" stroke-width="2" ';
-    const lineStyle = ' fill="none" stroke="#333333" stroke-width="2" ';
-    // Text style for existing text tags (if any)
-    const textStyle = ' fill="#333333" font-family="sans-serif" ';
+    final shapeStyle = ' fill="${colors.surface}" stroke="${colors.line}" stroke-width="2" ';
+    final lineStyle = ' fill="none" stroke="${colors.line}" stroke-width="2" ';
+    final markerStyle = ' fill="${colors.line}" stroke="none" ';
+    final textStyle = ' fill="${colors.text}" font-family="sans-serif" ';
 
     processed = processed.replaceAll('<rect', '<rect$shapeStyle');
     processed = processed.replaceAll('<polygon', '<polygon$shapeStyle');
     processed = processed.replaceAll('<circle', '<circle$shapeStyle');
     processed = processed.replaceAll('<ellipse', '<ellipse$shapeStyle');
     
-    // 3. Lines
-    processed = processed.replaceAll('<path', '<path$lineStyle');
+    // 3. Lines & Markers (Path)
+    // We use replaceAllMapped to be selective, as some paths are node shapes (e.g. rounded rects) which have inline fill.
+    processed = processed.replaceAllMapped(RegExp(r'<path([^>]*)>'), (match) {
+      final attrs = match.group(1) ?? '';
+      if (attrs.contains('arrowMarkerPath')) {
+        return '<path$markerStyle$attrs>';
+      } else if (attrs.contains('flowchart-link') || attrs.contains('edge-pattern')) {
+        return '<path$lineStyle$attrs>';
+      }
+      
+      // If it has inline fill, we need to check if it's "none" or a color.
+      // If it's a color, we force the theme's surface color to ensure theming works (fixing the "white node" issue).
+      // Note: This might override custom styles, but it guarantees the theme is applied.
+      if (attrs.contains('fill="')) {
+         if (attrs.contains('fill="none"')) {
+           return match.group(0)!; // Keep transparent paths (borders/overlays) as is
+         } else {
+           // It has a solid color. Replace it with our theme surface.
+           // We use a regex to replace the existing fill attribute.
+           final newAttrs = attrs.replaceAll(RegExp(r'fill="[^"]*"'), 'fill="${colors.surface}"');
+           return '<path$newAttrs>';
+         }
+      }
+      // Fallback for unknown paths: apply line style (safest assumption for edges)
+      return '<path$lineStyle$attrs>';
+    });
 
     // 4. Convert foreignObject to text
     // Regex to capture foreignObject attributes and content
@@ -164,7 +190,7 @@ class MermaidService {
       String result = '';
       if (isEdgeLabel) {
         // Add background rect for edge labels
-        result += '<rect x="$x" y="$y" width="$w" height="$h" fill="#ffffff" rx="4" ry="4" />';
+        result += '<rect x="$x" y="$y" width="$w" height="$h" fill="${colors.background}" rx="4" ry="4" />';
       }
 
       // Return a text element

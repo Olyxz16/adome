@@ -1,14 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../state/app_state.dart';
+import '../../services/theme_service.dart';
+import '../../models/app_theme_config.dart';
 
 class Ribbon extends StatelessWidget {
   const Ribbon({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Determine ribbon styling based on the APP Theme (not diagram theme)
+    final isAppDark = Theme.of(context).brightness == Brightness.dark;
+
+    final ribbonColor = isAppDark ? const Color(0xFF2D2D2D) : const Color(0xFFE0E0E0);
+    final contentColor = isAppDark ? const Color(0xFF333333) : const Color(0xFFF5F5F5);
+    final borderColor = isAppDark ? const Color(0xFF444444) : const Color(0xFFBDBDBD);
+    final textColor = isAppDark ? Colors.white : Colors.black87;
+    final iconColor = isAppDark ? Colors.white : Colors.black54;
+    final labelColor = isAppDark ? Colors.grey : Colors.black54;
+
     return Container(
-      color: const Color(0xFF2D2D2D), // Dark ribbon bg
+      color: ribbonColor,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -18,8 +30,8 @@ class Ribbon extends StatelessWidget {
             padding: const EdgeInsets.only(left: 8, top: 4),
             child: Row(
               children: [
-                _buildTab('Home', true),
-                _buildTab('View', false), // Placeholder
+                _buildTab('Home', true, contentColor, borderColor, textColor),
+                _buildTab('View', false, contentColor, borderColor, labelColor), // Placeholder
               ],
             ),
           ),
@@ -27,21 +39,25 @@ class Ribbon extends StatelessWidget {
           Container(
             height: 100,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: const BoxDecoration(
-              color: Color(0xFF333333), // Slightly lighter content bg
-              border: Border(top: BorderSide(color: Color(0xFF444444))),
+            decoration: BoxDecoration(
+              color: contentColor,
+              border: Border(top: BorderSide(color: borderColor)),
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildFileGroup(context),
-                _buildSeparator(),
-                _buildExportGroup(context),
-                _buildSeparator(),
-                _buildEngineGroup(context),
-                _buildSeparator(),
-                _buildAppearanceGroup(context),
-              ],
+            // Fix Overflow: Allow horizontal scrolling if ribbon content is too wide
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildFileGroup(context, iconColor, textColor, labelColor),
+                  _buildSeparator(isAppDark),
+                  _buildExportGroup(context, iconColor, textColor, labelColor),
+                  _buildSeparator(isAppDark),
+                  _buildEngineGroup(context, isAppDark, iconColor, textColor, labelColor, borderColor),
+                  _buildSeparator(isAppDark),
+                  _buildAppearanceGroup(context, isAppDark, textColor, labelColor, borderColor),
+                ],
+              ),
             ),
           ),
         ],
@@ -49,20 +65,20 @@ class Ribbon extends StatelessWidget {
     );
   }
 
-  Widget _buildTab(String label, bool isActive) {
+  Widget _buildTab(String label, bool isActive, Color contentColor, Color borderColor, Color textColor) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
-        color: isActive ? const Color(0xFF333333) : Colors.transparent,
+        color: isActive ? contentColor : Colors.transparent,
         border: isActive 
-            ? const Border(top: BorderSide(color: Color(0xFF444444)), left: BorderSide(color: Color(0xFF444444)), right: BorderSide(color: Color(0xFF444444)))
+            ? Border(top: BorderSide(color: borderColor), left: BorderSide(color: borderColor), right: BorderSide(color: borderColor))
             : null,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
       ),
       child: Text(
         label,
         style: TextStyle(
-          color: isActive ? Colors.white : Colors.grey,
+          color: isActive ? textColor : Colors.grey,
           fontSize: 13,
           fontWeight: isActive ? FontWeight.w500 : FontWeight.normal,
         ),
@@ -70,25 +86,25 @@ class Ribbon extends StatelessWidget {
     );
   }
 
-  Widget _buildSeparator() {
+  Widget _buildSeparator(bool isDark) {
     return Container(
       width: 1,
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      color: Colors.grey[700],
+      color: isDark ? Colors.grey[700] : Colors.grey[400],
     );
   }
 
-  Widget _buildGroupTitle(String title) {
+  Widget _buildGroupTitle(String title, Color labelColor) {
     return Padding(
       padding: const EdgeInsets.only(top: 4),
       child: Text(
         title.toUpperCase(),
-        style: const TextStyle(color: Colors.grey, fontSize: 10, letterSpacing: 0.5),
+        style: TextStyle(color: labelColor, fontSize: 10, letterSpacing: 0.5),
       ),
     );
   }
 
-  Widget _buildFileGroup(BuildContext context) {
+  Widget _buildFileGroup(BuildContext context, Color iconColor, Color textColor, Color labelColor) {
     return Column(
       children: [
         Expanded(
@@ -98,21 +114,25 @@ class Ribbon extends StatelessWidget {
                 icon: Icons.folder_open,
                 label: 'Load',
                 onTap: () => context.read<AppState>().openFile(),
+                iconColor: iconColor,
+                textColor: textColor,
               ),
               _buildLargeButton(
                 icon: Icons.save,
                 label: 'Save',
                 onTap: () => context.read<AppState>().saveFile(),
+                iconColor: iconColor,
+                textColor: textColor,
               ),
             ],
           ),
         ),
-        _buildGroupTitle('File'),
+        _buildGroupTitle('File', labelColor),
       ],
     );
   }
 
-  Widget _buildExportGroup(BuildContext context) {
+  Widget _buildExportGroup(BuildContext context, Color iconColor, Color textColor, Color labelColor) {
     return Column(
       children: [
         Expanded(
@@ -122,25 +142,28 @@ class Ribbon extends StatelessWidget {
                 icon: Icons.image,
                 label: 'SVG',
                 onTap: () => context.read<AppState>().exportSvg(),
+                iconColor: iconColor,
+                textColor: textColor,
               ),
-              // PNG Export button (disabled/placeholder for now)
               Opacity(
                 opacity: 0.5,
                 child: _buildLargeButton(
                   icon: Icons.photo_camera,
                   label: 'PNG',
-                  onTap: () {}, // Not implemented
+                  onTap: () {}, 
+                  iconColor: iconColor,
+                  textColor: textColor,
                 ),
               ),
             ],
           ),
         ),
-        _buildGroupTitle('Export'),
+        _buildGroupTitle('Export', labelColor),
       ],
     );
   }
 
-  Widget _buildEngineGroup(BuildContext context) {
+  Widget _buildEngineGroup(BuildContext context, bool isDark, Color iconColor, Color textColor, Color labelColor, Color borderColor) {
     final state = context.watch<AppState>();
     return Column(
       children: [
@@ -161,6 +184,10 @@ class Ribbon extends StatelessWidget {
                       DropdownMenuItem(value: RenderingEngine.d2, child: Text('D2')),
                     ],
                     onChanged: (v) => context.read<AppState>().setEngine(v!),
+                    textColor: textColor,
+                    labelColor: labelColor,
+                    borderColor: borderColor,
+                    isDark: isDark,
                   ),
                   if (state.engine == RenderingEngine.mermaid) ...[
                     const SizedBox(height: 4),
@@ -173,6 +200,10 @@ class Ribbon extends StatelessWidget {
                         DropdownMenuItem(value: 'elk', child: Text('ELK')),
                       ],
                       onChanged: (v) => context.read<AppState>().setMermaidLayout(v!),
+                      textColor: textColor,
+                      labelColor: labelColor,
+                      borderColor: borderColor,
+                      isDark: isDark,
                     ),
                     if (state.mermaidLayout == 'elk') ...[
                       const SizedBox(height: 4),
@@ -186,6 +217,10 @@ class Ribbon extends StatelessWidget {
                           DropdownMenuItem(value: 'force', child: Text('Force')),
                         ],
                         onChanged: (v) => context.read<AppState>().setMermaidElkAlgorithm(v!),
+                        textColor: textColor,
+                        labelColor: labelColor,
+                        borderColor: borderColor,
+                        isDark: isDark,
                       ),
                     ]
                   ]
@@ -200,6 +235,8 @@ class Ribbon extends StatelessWidget {
                     icon: Icons.refresh,
                     label: 'Render',
                     onTap: () => context.read<AppState>().manualRender(),
+                    iconColor: iconColor,
+                    textColor: textColor,
                   ),
                 ],
               ),
@@ -213,10 +250,11 @@ class Ribbon extends StatelessWidget {
                       Checkbox(
                         value: state.autoRender, 
                         onChanged: (v) => context.read<AppState>().setAutoRender(v!),
-                        checkColor: Colors.black,
-                        activeColor: Colors.white,
+                        checkColor: isDark ? Colors.black : Colors.white,
+                        activeColor: isDark ? Colors.white : Colors.black,
+                        side: BorderSide(color: textColor),
                       ),
-                      const Text('Auto', style: TextStyle(color: Colors.white, fontSize: 12)),
+                      Text('Auto', style: TextStyle(color: textColor, fontSize: 12)),
                     ],
                   )
                 ],
@@ -224,12 +262,12 @@ class Ribbon extends StatelessWidget {
             ],
           ),
         ),
-        _buildGroupTitle('Engine'),
+        _buildGroupTitle('Engine', labelColor),
       ],
     );
   }
 
-  Widget _buildAppearanceGroup(BuildContext context) {
+  Widget _buildAppearanceGroup(BuildContext context, bool isDark, Color textColor, Color labelColor, Color borderColor) {
     final state = context.watch<AppState>();
     return Column(
       children: [
@@ -241,48 +279,61 @@ class Ribbon extends StatelessWidget {
               _buildDropdownRow<ThemeMode>(
                 context: context,
                 label: 'App',
-                value: state.appTheme,
+                value: state.appThemeMode,
                 items: const [
                   DropdownMenuItem(value: ThemeMode.system, child: Text('System')),
                   DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
                   DropdownMenuItem(value: ThemeMode.light, child: Text('Light')),
                 ],
-                onChanged: (v) => context.read<AppState>().setAppTheme(v!),
+                onChanged: (v) => context.read<AppState>().setAppThemeMode(v!),
+                textColor: textColor,
+                labelColor: labelColor,
+                borderColor: borderColor,
+                isDark: isDark,
               ),
               const SizedBox(height: 4),
-              if (state.engine == RenderingEngine.d2)
-                _buildDropdownRow<int>(
-                  context: context,
-                  label: 'Theme',
-                  value: state.d2Theme,
-                  items: [0, 1, 3, 4, 5, 6, 7, 8, 100, 101, 102, 103, 104, 105, 300, 301, 302] // Common D2 themes
-                      .map((id) => DropdownMenuItem(value: id, child: Text(id.toString())))
-                      .toList(),
-                  onChanged: (v) => context.read<AppState>().setD2Theme(v!),
-                )
-              else
-                _buildDropdownRow<String>(
-                  context: context,
-                  label: 'Theme',
-                  value: state.mermaidTheme,
-                  items: const [
-                    DropdownMenuItem(value: 'default', child: Text('Default')),
-                    DropdownMenuItem(value: 'neutral', child: Text('Neutral')),
-                    DropdownMenuItem(value: 'dark', child: Text('Dark')),
-                    DropdownMenuItem(value: 'forest', child: Text('Forest')),
-                    DropdownMenuItem(value: 'base', child: Text('Base')),
-                  ],
-                  onChanged: (v) => context.read<AppState>().setMermaidTheme(v!),
-                ),
+              _buildDropdownRow<AppThemeConfig>(
+                context: context,
+                label: 'Theme',
+                value: state.activeThemeConfig,
+                items: ThemeService.availableThemes
+                    .map((theme) => DropdownMenuItem(
+                      value: theme,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            theme.isDark ? Icons.dark_mode : Icons.light_mode, 
+                            size: 14, 
+                            color: theme.isDark ? Colors.amber[200] : Colors.orange[800]
+                          ),
+                          const SizedBox(width: 8),
+                          Text(theme.name),
+                        ],
+                      ),
+                    ))
+                    .toList(),
+                onChanged: (v) => context.read<AppState>().setDiagramTheme(v!),
+                textColor: textColor,
+                labelColor: labelColor,
+                borderColor: borderColor,
+                isDark: isDark,
+              ),
             ],
           ),
         ),
-        _buildGroupTitle('Appearance'),
+        _buildGroupTitle('Appearance', labelColor),
       ],
     );
   }
 
-  Widget _buildLargeButton({required IconData icon, required String label, required VoidCallback onTap}) {
+  Widget _buildLargeButton({
+    required IconData icon, 
+    required String label, 
+    required VoidCallback onTap,
+    required Color iconColor,
+    required Color textColor,
+  }) {
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -290,9 +341,9 @@ class Ribbon extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: Colors.white, size: 24),
+            Icon(icon, color: iconColor, size: 24),
             const SizedBox(height: 4),
-            Text(label, style: const TextStyle(color: Colors.white, fontSize: 11)),
+            Text(label, style: TextStyle(color: textColor, fontSize: 11)),
           ],
         ),
       ),
@@ -305,49 +356,81 @@ class Ribbon extends StatelessWidget {
     required T value,
     required List<DropdownMenuItem<T>> items,
     required ValueChanged<T?> onChanged,
+    required Color textColor,
+    required Color labelColor,
+    required Color borderColor,
+    required bool isDark,
   }) {
-    // Find the selected item's text label for display
     final selectedItem = items.firstWhere(
       (item) => item.value == value,
       orElse: () => items.first,
     );
-    final selectedLabel = (selectedItem.child as Text).data ?? '';
+    
+    Widget displayLabel;
+    if (selectedItem.child is Text) {
+      displayLabel = Text(
+        (selectedItem.child as Text).data ?? '', 
+        style: TextStyle(color: textColor, fontSize: 11)
+      );
+    } else if (selectedItem.child is Row) {
+      if (value is AppThemeConfig) {
+         final theme = value as AppThemeConfig;
+         displayLabel = Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                theme.isDark ? Icons.dark_mode : Icons.light_mode, 
+                size: 12, 
+                color: textColor
+              ),
+              const SizedBox(width: 4),
+              Text(theme.name, style: TextStyle(color: textColor, fontSize: 11)),
+            ],
+         );
+      } else {
+         displayLabel = selectedItem.child;
+      }
+    } else {
+      displayLabel = selectedItem.child;
+    }
 
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
           width: 45, 
-          child: Text(label, style: const TextStyle(color: Colors.grey, fontSize: 11))
+          child: Text(label, style: TextStyle(color: labelColor, fontSize: 11))
         ),
         SizedBox(
           height: 24,
           child: Container(
             decoration: BoxDecoration(
-              color: const Color(0xFF444444),
+              color: isDark ? const Color(0xFF444444) : Colors.white,
               borderRadius: BorderRadius.circular(2),
-              border: Border.all(color: const Color(0xFF555555)),
+              border: Border.all(color: borderColor),
             ),
             child: Theme(
               data: Theme.of(context).copyWith(
-                popupMenuTheme: const PopupMenuThemeData(
-                  color: Color(0xFF444444), // Menu background
-                  textStyle: TextStyle(color: Colors.white, fontSize: 11),
+                popupMenuTheme: PopupMenuThemeData(
+                  color: isDark ? const Color(0xFF444444) : Colors.white,
+                  textStyle: TextStyle(color: textColor, fontSize: 11),
                 ),
               ),
               child: PopupMenuButton<T>(
                 initialValue: value,
                 onSelected: onChanged,
-                tooltip: '', // Disable tooltip to look less like a toolbar button
-                offset: const Offset(0, 24), // Position below the button
+                tooltip: '',
+                offset: const Offset(0, 24),
                 padding: EdgeInsets.zero,
                 itemBuilder: (context) {
                   return items.map((item) {
-                    final text = (item.child as Text).data ?? '';
                     return PopupMenuItem<T>(
                       value: item.value,
-                      height: 28, // Compact height
-                      child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 11)),
+                      height: 28,
+                      child: DefaultTextStyle(
+                        style: TextStyle(color: textColor, fontSize: 11),
+                        child: item.child,
+                      ),
                     );
                   }).toList();
                 },
@@ -356,9 +439,9 @@ class Ribbon extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(selectedLabel, style: const TextStyle(color: Colors.white, fontSize: 11)),
+                      displayLabel,
                       const SizedBox(width: 4),
-                      const Icon(Icons.arrow_drop_down, color: Colors.grey, size: 16),
+                      Icon(Icons.arrow_drop_down, color: labelColor, size: 16),
                     ],
                   ),
                 ),

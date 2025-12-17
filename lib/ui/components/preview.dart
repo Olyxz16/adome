@@ -25,6 +25,13 @@ class _PreviewState extends State<Preview> {
     });
   }
 
+  Color _parseColor(String hexString) {
+    final buffer = StringBuffer();
+    if (hexString.length == 6 || hexString.length == 7) buffer.write('ff');
+    buffer.write(hexString.replaceFirst('#', ''));
+    return Color(int.parse(buffer.toString(), radix: 16));
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
@@ -46,7 +53,7 @@ class _PreviewState extends State<Preview> {
     }
 
     return Container(
-      color: Colors.white,
+      color: _parseColor(state.activeThemeConfig.colors.background),
       child: Stack(
         children: [
           InteractiveViewer(

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../services/d2_service.dart';
 import '../services/mermaid_service.dart';
 import '../services/file_service.dart';
+import '../services/theme_service.dart';
+import '../models/app_theme_config.dart';
 
 enum RenderingEngine { d2, mermaid }
 
@@ -48,14 +50,15 @@ class AppState extends ChangeNotifier {
   String _mermaidElkAlgorithm = 'layered';
   String get mermaidElkAlgorithm => _mermaidElkAlgorithm;
 
-  ThemeMode _appTheme = ThemeMode.system;
-  ThemeMode get appTheme => _appTheme;
-
-  int _d2Theme = 0;
-  int get d2Theme => _d2Theme;
-
-  String _mermaidTheme = 'neutral';
-  String get mermaidTheme => _mermaidTheme;
+  // Theme State
+  AppThemeConfig _activeThemeConfig = ThemeService.defaultTheme;
+  AppThemeConfig get activeThemeConfig => _activeThemeConfig;
+  
+  // This controls the overall App UI mode (Light/Dark/System)
+  // We can optionally sync this with the diagram theme or keep it separate.
+  // For now, we'll keep it separate but default to system.
+  ThemeMode _appThemeMode = ThemeMode.system;
+  ThemeMode get appThemeMode => _appThemeMode;
 
   Timer? _debounce;
 
@@ -82,19 +85,13 @@ class AppState extends ChangeNotifier {
     if (_autoRender) _compile();
   }
 
-  void setAppTheme(ThemeMode mode) {
-    _appTheme = mode;
+  void setAppThemeMode(ThemeMode mode) {
+    _appThemeMode = mode;
     notifyListeners();
   }
 
-  void setD2Theme(int themeId) {
-    _d2Theme = themeId;
-    notifyListeners();
-    if (_autoRender) _compile();
-  }
-
-  void setMermaidTheme(String theme) {
-    _mermaidTheme = theme;
+  void setDiagramTheme(AppThemeConfig theme) {
+    _activeThemeConfig = theme;
     notifyListeners();
     if (_autoRender) _compile();
   }
@@ -134,12 +131,15 @@ class AppState extends ChangeNotifier {
     
     try {
       if (_engine == RenderingEngine.d2) {
-        _compiledD2Svg = await _d2Service.compile(_d2Content, themeId: _d2Theme);
+        _compiledD2Svg = await _d2Service.compile(
+          _d2Content, 
+          themeId: _activeThemeConfig.d2.themeId
+        );
         print('AppState: D2 compiled. SVG length: ${_compiledD2Svg.length}');
       } else {
         _compiledMermaidSvg = await _mermaidService.compile(
           _mermaidContent, 
-          theme: _mermaidTheme,
+          config: _activeThemeConfig,
           layout: _mermaidLayout,
           elkAlgorithm: _mermaidElkAlgorithm
         );
