@@ -40,13 +40,11 @@ class MermaidService {
     }
 
     final svg = await _webviewService.renderMermaid(content, mermaidConfig);
-    debugPrint('Mermaid Raw SVG (first 500): ${svg.substring(0, svg.length > 500 ? 500 : svg.length)}');
     
     return _processSvg(svg, config.colors);
   }
 
   String _processSvg(String svg, ThemeColors colors) {
-    debugPrint('MermaidService: Raw SVG contains "foreignObject": ${svg.contains('foreignObject')}');
     
     var processed = svg;
 
@@ -123,8 +121,6 @@ class MermaidService {
       // Let's try y + h/2 + some manual adjustment.
       final cy = y + h / 2 + (h * 0.2); // Adjust based on height, maybe 20% from center?
 
-      debugPrint('MermaidService: foreignObject -> Text Conversion: x=$x, y=$y, w=$w, h=$h, cx=$cx, cy=$cy, text="$textContent"');
-      
       bool isEdgeLabel = content.contains('edgeLabel') || content.contains('labelBkg');
 
       String result = '';

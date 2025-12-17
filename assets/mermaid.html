@@ -7,20 +7,11 @@
         function send(msg) {
             fetch('/BRIDGE?msg=' + encodeURIComponent(msg)).catch(e => {});
         }
-        function log(msg) {
-            send("LOG:" + msg);
-        }
-        window.onerror = function(message, source, lineno, colno, error) {
-            log("Global Error: " + message);
-        };
     </script>
     <script src="mermaid.min.js"></script>
     <script>
-        log("Mermaid library loaded (Local)");
-        
         // Define render function
         async function renderMermaid(code, config) {
-            log("renderMermaid called with length: " + (code ? code.length : 'null'));
             try {
                 if (typeof mermaid === 'undefined') throw "Mermaid not loaded";
                 
@@ -41,14 +32,12 @@
                     inlineStyles(svgEl);
                     const finalSvg = svgEl.outerHTML;
                     document.body.removeChild(container);
-                    log("Render success! (Styles inlined)");
                     return finalSvg;
                 }
                 document.body.removeChild(container);
-                log("Render success! (No SVG found?)");
                 return result.svg;
             } catch (error) {
-                log("Render Error: " + error);
+                send('ERROR:' + encodeURIComponent("Render Error: " + error.toString()));
                 throw error;
             }
         }
@@ -68,10 +57,8 @@
                 
                 // Special handling for text alignment
                 if (el.tagName.toLowerCase() === 'text') {
-                     // MERMAID FIX: Apply vertical shift to ALL text elements because Mermaid assumes centered baseline
-                     // but flutter_svg defaults to alphabetic/bottom baseline.
-                     el.setAttribute('dy', '14px'); // Sweet spot
-                     el.removeAttribute('dominant-baseline'); // Remove to avoid conflict
+                     el.setAttribute('dy', '14px');
+                     el.removeAttribute('dominant-baseline');
                 }
                 
                 Array.from(el.children).forEach(traverse);
@@ -83,15 +70,14 @@
         try {
             if (typeof mermaid !== 'undefined') {
                 mermaid.initialize({ startOnLoad: false });
-                log("Mermaid initialized");
             } else {
-                log("Mermaid undefined after load");
+                send('ERROR:Mermaid undefined after load');
             }
         } catch(e) {
-            log("Init error: " + e);
+            send('ERROR:Init:' + e.toString());
         }
 
-        send("READY");
+        send("READY"); // Keep this to signal readiness
     </script>
 </head>
 <body>

@@ -17,7 +17,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev liblzma-dev
 
       - name: Install Flutter
         uses: subosito/flutter-action@v2
@@ -30,8 +30,16 @@ jobs:
           mkdir -p assets/bin
           curl -L https://github.com/terrastruct/d2/releases/download/v0.7.1/d2-v0.7.1-linux-amd64.tar.gz | tar xz -C assets/bin --strip-components=2 d2-v0.7.1/bin/d2
 
+      - name: Download Mermaid JS
+        run: |
+          mkdir -p assets
+          curl -L -o assets/mermaid.min.js https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js
+
       - name: Get Dependencies
         run: flutter pub get
+
+      - name: Patch Webview (Linux Headless)
+        run: chmod +x scripts/patch_webview.sh && ./scripts/patch_webview.sh
 
       - name: Build Linux
         run: flutter build linux --release
@@ -88,6 +96,11 @@ jobs:
           Remove-Item -Path $output
           Remove-Item -Path "d2-v0.7.1" -Recurse
 
+      - name: Download Mermaid JS
+        run: |
+          New-Item -Path assets -ItemType Directory -Force
+          Invoke-WebRequest -Uri "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js" -OutFile "assets/mermaid.min.js"
+
       - name: Get Dependencies
         run: flutter pub get
 
@@ -120,6 +133,11 @@ jobs:
         run: |
           mkdir -p assets/bin
           curl -L https://github.com/terrastruct/d2/releases/download/v0.7.1/d2-v0.7.1-macos-amd64.tar.gz | tar xz -C assets/bin --strip-components=2 d2-v0.7.1/bin/d2
+
+      - name: Download Mermaid JS
+        run: |
+          mkdir -p assets
+          curl -L -o assets/mermaid.min.js https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js
 
       - name: Get Dependencies
         run: flutter pub get

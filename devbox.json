@@ -1,10 +1,14 @@
 {
   "packages": [
     "flutter@3.38",
-    "jdk@17"
+    "jdk@17",
+    "d2@latest"
   ],
   "shell": {
     "init_hook": [
+      "mkdir -p assets",
+      "curl -s -L -o assets/mermaid.min.js https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js",
+      "./scripts/patch_webview.sh"
     ]
   }
 }
