@@ -104,7 +104,21 @@ class MermaidService {
     // Remove <switch> tags (keep content) as they might confuse flutter_svg when foreignObject is replaced
     processed = processed.replaceAll(RegExp(r'<\/?switch[^>]*>'), '');
 
-    // 2. Convert foreignObject to text
+    // 2. Inject default styles for shapes (Rect, Polygon, Circle, Ellipse)
+    const shapeStyle = ' fill="#ffffff" stroke="#333333" stroke-width="2" ';
+    const lineStyle = ' fill="none" stroke="#333333" stroke-width="2" ';
+    // Text style for existing text tags (if any)
+    const textStyle = ' fill="#333333" font-family="sans-serif" ';
+
+    processed = processed.replaceAll('<rect', '<rect$shapeStyle');
+    processed = processed.replaceAll('<polygon', '<polygon$shapeStyle');
+    processed = processed.replaceAll('<circle', '<circle$shapeStyle');
+    processed = processed.replaceAll('<ellipse', '<ellipse$shapeStyle');
+    
+    // 3. Lines
+    processed = processed.replaceAll('<path', '<path$lineStyle');
+
+    // 4. Convert foreignObject to text
     // Regex to capture foreignObject attributes and content
     // <foreignObject ...> ... content ... </foreignObject>
     final foreignObjectRegex = RegExp(r'<foreignObject([^>]*)>([\s\S]*?)<\/foreignObject>');
@@ -139,29 +153,25 @@ class MermaidService {
       
       if (textContent.isEmpty) return '';
 
-      // Center text?
+      // Center text
       // Simple centering: x + width/2, y + height/2 + adjustment
       final cx = x + w / 2;
       final cy = y + h / 2 + 5; // heuristic vertical center
+      
+      // Check if it's an edge label to add background
+      bool isEdgeLabel = content.contains('edgeLabel') || content.contains('labelBkg');
+
+      String result = '';
+      if (isEdgeLabel) {
+        // Add background rect for edge labels
+        result += '<rect x="$x" y="$y" width="$w" height="$h" fill="#ffffff" rx="4" ry="4" />';
+      }
 
       // Return a text element
       // We don't add fill/font-family here, as step 5 will add them globally.
-      return '<text x="$cx" y="$cy" font-size="14" text-anchor="middle" dominant-baseline="middle">$textContent</text>';
+      result += '<text x="$cx" y="$cy" font-size="14" text-anchor="middle" dominant-baseline="middle">$textContent</text>';
+      return result;
     });
-
-    // 3. Inject default styles for shapes (Rect, Polygon, Circle, Ellipse)
-    const shapeStyle = ' fill="#ffffff" stroke="#333333" stroke-width="2" ';
-    const lineStyle = ' fill="none" stroke="#333333" stroke-width="2" ';
-    // Text style for existing text tags (if any)
-    const textStyle = ' fill="#333333" font-family="sans-serif" ';
-
-    processed = processed.replaceAll('<rect', '<rect$shapeStyle');
-    processed = processed.replaceAll('<polygon', '<polygon$shapeStyle');
-    processed = processed.replaceAll('<circle', '<circle$shapeStyle');
-    processed = processed.replaceAll('<ellipse', '<ellipse$shapeStyle');
-    
-    // 4. Lines
-    processed = processed.replaceAll('<path', '<path$lineStyle');
     
     // 5. Text
     // Use replaceAllMapped to correctly handle backreferences
