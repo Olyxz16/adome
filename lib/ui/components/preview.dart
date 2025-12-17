@@ -28,34 +28,33 @@ class Preview extends StatelessWidget {
 
     return Container(
       color: Colors.white,
-      child: Center(
-        child: SingleChildScrollView(
-          scrollDirection: Axis.vertical,
-          child: SingleChildScrollView(
-             scrollDirection: Axis.horizontal,
-             child: SvgPicture.string(
-               svgContent,
-               placeholderBuilder: (BuildContext context) => Container(
-                  padding: const EdgeInsets.all(30.0),
-                  child: const CircularProgressIndicator(),
-               ),
-               errorBuilder: (context, error, stackTrace) {
-                 return Container(
-                   padding: const EdgeInsets.all(16),
-                   color: Colors.red.withOpacity(0.1),
-                   child: Column(
-                     mainAxisSize: MainAxisSize.min,
-                     children: [
-                       const Icon(Icons.error_outline, color: Colors.red, size: 48),
-                       const SizedBox(height: 8),
-                       const Text('Failed to render SVG', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-                       const SizedBox(height: 8),
-                       Text(error.toString(), style: const TextStyle(color: Colors.white70)),
-                     ],
-                   ),
-                 );
-               },
-             ),
+      child: InteractiveViewer(
+        boundaryMargin: const EdgeInsets.all(double.infinity),
+        minScale: 0.1,
+        maxScale: 8.0,
+        child: Center(
+          child: SvgPicture.string(
+            svgContent,
+            placeholderBuilder: (BuildContext context) => Container(
+               padding: const EdgeInsets.all(30.0),
+               child: const CircularProgressIndicator(),
+            ),
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                padding: const EdgeInsets.all(16),
+                color: Colors.red.withValues(alpha: 0.1),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                    const SizedBox(height: 8),
+                    const Text('Failed to render SVG', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Text(error.toString(), style: const TextStyle(color: Colors.white70)),
+                  ],
+                ),
+              );
+            },
           ),
         ),
       ),
