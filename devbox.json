@@ -1,0 +1,10 @@
+{
+  "packages": [
+    "flutter@3.38",
+    "jdk@17"
+  ],
+  "shell": {
+    "init_hook": [
+    ]
+  }
+}

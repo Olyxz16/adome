@@ -4,50 +4,136 @@ on:
   release:
     types: [created]
 
+permissions:
+  contents: write
+
 jobs:
   build-linux:
-    name: Build Linux Packages
+    name: Build Linux
     runs-on: ubuntu-latest
-    # Tell GitHub to run this job INSIDE your pre-built container
-    container:
-      image: ghcr.io/olyxz16/adome-builder:latest
-      # Pass the GITHUB_TOKEN so it can pull the image from your private/public repo
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    permissions:
-      contents: write
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          # Mark the workspace as safe for git (required when running in container)
-          set-safe-directory: true
+      - uses: actions/checkout@v4
 
-      # All "Setup" and "Install" steps are GONE! 
-      # We jump straight to building.
-
-      - name: Build Binary
+      - name: Install dependencies
         run: |
-          # The container already has 'wails' in the PATH
-          wails build -platform linux/amd64 -tags webkit2_41
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
 
-      - name: Package Deb and Rpm
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Download D2 Binary
+        run: |
+          mkdir -p assets/bin
+          curl -L https://github.com/terrastruct/d2/releases/download/v0.7.1/d2-v0.7.1-linux-amd64.tar.gz | tar xz -C assets/bin --strip-components=2 d2-v0.7.1/bin/d2
+
+      - name: Get Dependencies
+        run: flutter pub get
+
+      - name: Build Linux
+        run: flutter build linux --release
+
+      - name: Install NFPM
+        run: |
+          echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
+          sudo apt-get update
+          sudo apt-get install nfpm
+
+      - name: Package Linux
         env:
           VERSION: ${{ github.ref_name }}
         run: |
+          # Remove 'v' prefix
           export VERSION="${VERSION#v}"
           
-          # The container already has 'nfpm' in the PATH
-          nfpm pkg --packager deb --target "build/bin/adome_${VERSION}_amd64.deb"
-          nfpm pkg --packager rpm --target "build/bin/adome-${VERSION}-1.x86_64.rpm"
+          # Create deb and rpm
+          nfpm pkg --packager deb --target "build/adome_${VERSION}_amd64.deb"
+          nfpm pkg --packager rpm --target "build/adome-${VERSION}-1.x86_64.rpm"
+          
+          # Create AppImage or Tarball? Tarball is easy.
+          tar -czf "build/adome_${VERSION}_linux_amd64.tar.gz" -C build/linux/x64/release/bundle .
 
-      - name: Upload Release Assets
+      - name: Upload Linux Artifacts
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            build/bin/*.deb
-            build/bin/*.rpm
-            build/bin/adome
+            build/*.deb
+            build/*.rpm
+            build/*.tar.gz
+
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Download D2 Binary (Windows)
+        run: |
+          New-Item -Path assets/bin -ItemType Directory -Force
+          $url = "https://github.com/terrastruct/d2/releases/download/v0.7.1/d2-v0.7.1-windows-amd64.tar.gz"
+          $output = "d2.tar.gz"
+          Invoke-WebRequest -Uri $url -OutFile $output
+          tar -xzf $output
+          Move-Item -Path "d2-v0.7.1/bin/d2.exe" -Destination "assets/bin/d2" -Force
+          Remove-Item -Path $output
+          Remove-Item -Path "d2-v0.7.1" -Recurse
+
+      - name: Get Dependencies
+        run: flutter pub get
+
+      - name: Build Windows
+        run: flutter build windows --release
+
+      - name: Archive Windows
+        run: |
+          Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath build/adome_windows_x64.zip
+
+      - name: Upload Windows Artifacts
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: build/adome_windows_x64.zip
+
+  build-macos:
+    name: Build MacOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Download D2 Binary (Mac)
+        run: |
+          mkdir -p assets/bin
+          curl -L https://github.com/terrastruct/d2/releases/download/v0.7.1/d2-v0.7.1-macos-amd64.tar.gz | tar xz -C assets/bin --strip-components=2 d2-v0.7.1/bin/d2
+
+      - name: Get Dependencies
+        run: flutter pub get
+
+      - name: Build MacOS
+        run: flutter build macos --release
+
+      - name: Archive MacOS
+        run: |
+          # Archive the .app
+          ditto -c -k --sequesterRsrc --keepParent build/macos/Build/Products/Release/desktop_migration_app.app build/adome_macos_x64.zip
+
+      - name: Upload MacOS Artifacts
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: build/adome_macos_x64.zip

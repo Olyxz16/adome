@@ -1,0 +1,43 @@
+name: desktop_migration_app
+description: A new Flutter project designed for Desktop (Windows, Linux, MacOS).
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # State Management
+  provider: ^6.1.1
+  
+  # UI & File System
+  file_selector: ^1.0.3
+  path_provider: ^2.1.2
+  window_manager: ^0.5.1
+  google_fonts: ^6.1.0
+  
+  # Editor
+  code_text_field: ^1.1.0
+  flutter_highlight: ^0.7.0
+  highlight: ^0.7.0
+
+  # Rendering
+  flutter_svg: ^2.0.10+1
+  
+  # Networking
+  http: ^1.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/mermaid.html
+    - assets/mermaid.min.js
+    - assets/bin/d2

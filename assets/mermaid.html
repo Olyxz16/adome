@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mermaid Preview</title>
+    <script src="mermaid.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; background-color: transparent; font-family: sans-serif; }
+        #container { width: 100%; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: auto; }
+        .mermaid { width: 100%; }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div class="mermaid" id="mermaid-chart">
+            %%CONTENT%%
+        </div>
+    </div>
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
+    </script>
+</body>
+</html>

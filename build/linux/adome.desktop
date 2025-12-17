@@ -1,8 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Adome
-Comment=Actually Decent Offline Mermaid Editor
-Exec=/usr/bin/adome
-Icon=adome
-Terminal=false
-Categories=Development;Office;

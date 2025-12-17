@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Adome
+Comment=Actually Decent Offline Mermaid Editor
+Exec=/opt/adome/desktop_migration_app
+Icon=adome
+Terminal=false
+Type=Application
+Categories=Utility;Development;

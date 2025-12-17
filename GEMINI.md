@@ -49,7 +49,6 @@ Do not add any other text or explanation. The system will automatically execute 
 ## Project Overview
 
 **Name**: DiagramEditor (Wails)
-**Stack**: Go (Backend), Svelte + TypeScript (Frontend).
 **Core Function**: An offline, cross-platform editor for Mermaid and D2 diagrams with live preview and custom theming.
 **Roadmap**: A roadmap file is available in docs/ROADMAP.md
 
@@ -76,60 +75,3 @@ The application must use a **Ribbon-style** top menu (similar to Microsoft Offic
 
 * **Appearance Group**:
     * **Theme Selector**: A dropdown to select the active color palette (e.g., "Oceanic", "Dark", "Light").
-
-## Project Structure (Files & Architecture)
-
-### 1. Frontend Structure (`frontend/src/`)
-* **Components (`components/`)**:
-    * `Editor/Editor.svelte`: Replaces simple textarea with Monaco/CodeMirror. Handles syntax highlighting switching.
-    * `Preview/Preview.svelte`: Main wrapper. Switches between `MermaidCanvas` and `D2Canvas`.
-    * `Preview/MermaidCanvas.svelte`: Handles `mermaid.render` and layout config.
-    * `Preview/D2Canvas.svelte`: Receives raw SVG from backend and injects it.
-    * `Ribbon/Ribbon.svelte`: Implements the UI specs defined above.
-    * `Palette/PaletteManager.svelte`: Modal for CRUD operations on themes.
-* **State (`lib/stores/`)**:
-    * `editor.ts`: Stores content, selected engine, dirty state.
-    * `theme.ts`: Stores active palette, dark mode preference.
-* **Services (`lib/services/`)**:
-    * `mermaid.ts`: Configuration and initialization logic for Mermaid.
-    * `bridge.ts`: Strongly typed wrappers for Wails runtime calls.
-
-### 2. Backend Structure (`internal/`)
-* **`app/app.go`**: Main Wails binding. Injects services.
-* **`d2/service.go`**:
-    * Wraps `oss.terrastruct.com/d2`.
-    * Method: `Compile(input string) (string, error)`.
-* **`config/service.go`**:
-    * Handles persistence of `user-palettes.json` and app preferences.
-    * Uses `os.UserConfigDir`.
-* **`files/service.go`**:
-    * Handles `runtime.OpenFileDialog` and `runtime.SaveFileDialog`.
-
-## Data Flows
-
-### Rendering Flow (Mermaid)
-1.  User types in Editor.
-2.  Svelte store updates.
-3.  Debouncer triggers.
-4.  Check **Layout Engine** setting.
-5.  `mermaid.render()` called in JS with appropriate config.
-6.  DOM updated.
-
-### Rendering Flow (D2)
-1.  User types in Editor.
-2.  Svelte store updates.
-3.  Debouncer triggers.
-4.  Call Wails: `backend.D2Service.Compile(text)`.
-5.  Go: `d2.Compile` -> Generates SVG.
-6.  Go: Returns SVG string.
-7.  Svelte: Injects SVG into `Preview` div.
-
-## Cross-Platform Requirements
-
-* All file paths must use `filepath.Join` and `os.UserConfigDir` to ensure compatibility with Windows, macOS, and Linux.
-* Window controls should use Wails frameless capabilities but respect OS conventions where possible.
-
-## Testing Strategy
-
-* **Go**: Unit tests for `D2Service` (mocking the compiler if necessary) and `ConfigService`.
-* **Frontend**: Vitest for utility logic (Palette conversion, Ribbon state logic).
