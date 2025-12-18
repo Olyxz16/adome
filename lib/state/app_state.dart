@@ -3,11 +3,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-// import 'package:flutter_svg/flutter_svg.dart'; // Not used for export directly
-// import 'package:vector_graphics/vector_graphics.dart' as vg;
-// import 'package:vector_graphics_compiler/vector_graphics_compiler.dart' as vg_compiler;
-// import 'package:vector_graphics_codec/vector_graphics_codec.dart' as vgc;
-// import 'package:xml/xml.dart' as xml; // Added
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../services/d2_service.dart';
 import '../services/mermaid_service.dart';
@@ -28,18 +24,15 @@ class AppState extends ChangeNotifier {
     String content = _engine == RenderingEngine.d2 ? _compiledD2Svg : _compiledMermaidSvg;
     if (content.isEmpty) return;
 
-    debugPrint('AppState: PNG Export requires flutter_svg API adjustment for version 2.x');
-    /*
     try {
-      // API Mismatch: SvgStringLoader.load is not directly accessible or requires specific arguments in flutter_svg 2.x
-      // and svg.fromSvgString is removed.
-      // Need to investigate correct way to rasterize SVG without a Widget context in this version.
-      
       final SvgStringLoader loader = SvgStringLoader(content);
-      final PictureInfo pictureInfo = await loader.load(const SvgTheme());
+      final PictureInfo pictureInfo = await vg.loadPicture(loader, null);
       
-      double width = pictureInfo.size.width;
-      double height = pictureInfo.size.height;
+      final ui.Picture picture = pictureInfo.picture;
+      final ui.Size size = pictureInfo.size;
+      
+      double width = size.width;
+      double height = size.height;
       
       if (width <= 0 || height <= 0) {
         width = 800;
@@ -54,10 +47,10 @@ class AppState extends ChangeNotifier {
       final ui.Canvas canvas = ui.Canvas(recorder);
       
       canvas.scale(scale, scale);
-      canvas.drawPicture(pictureInfo.picture);
+      canvas.drawPicture(picture);
       
-      final ui.Picture picture = recorder.endRecording();
-      final ui.Image image = await picture.toImage(targetWidth, targetHeight);
+      final ui.Picture finalPicture = recorder.endRecording();
+      final ui.Image image = await finalPicture.toImage(targetWidth, targetHeight);
       
       final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       
@@ -67,7 +60,6 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       debugPrint('AppState: Error exporting PNG: $e');
     }
-    */
   }
 
   RenderingEngine _engine = RenderingEngine.mermaid;

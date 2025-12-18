@@ -1,7 +1,7 @@
-import 'package:desktop_migration_app/models/app_theme_config.dart';
-import 'package:desktop_migration_app/services/theme_service.dart';
-import 'package:desktop_migration_app/state/app_state.dart';
-import 'package:desktop_migration_app/ui/components/preview.dart';
+import 'package:adome/models/app_theme_config.dart';
+import 'package:adome/services/theme_service.dart';
+import 'package:adome/state/app_state.dart';
+import 'package:adome/ui/components/preview.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
