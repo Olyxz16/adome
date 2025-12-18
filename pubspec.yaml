@@ -1,4 +1,4 @@
-name: desktop_migration_app
+name: adome
 description: A new Flutter project designed for Desktop (Windows, Linux, MacOS).
 publish_to: 'none'
 version: 1.0.0+1
@@ -33,6 +33,9 @@ dependencies:
   # Webview for local Mermaid rendering
   desktop_webview_window: ^0.2.3 # Use a recent stable version
   path: ^1.9.1
+  vector_graphics_compiler: ^1.1.19
+  vector_graphics: ^1.1.19
+  xml: ^6.6.1
 
 dev_dependencies:
   flutter_test:

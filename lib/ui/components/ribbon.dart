@@ -5,6 +5,7 @@ import 'package:window_manager/window_manager.dart';
 import '../../state/app_state.dart';
 import '../../services/theme_service.dart';
 import '../../models/app_theme_config.dart';
+import 'window_controls.dart';
 
 class Ribbon extends StatelessWidget {
   const Ribbon({super.key});
@@ -23,6 +24,7 @@ class Ribbon extends StatelessWidget {
 
     return Container(
       color: ribbonColor,
+      width: double.infinity,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -38,14 +40,17 @@ class Ribbon extends StatelessWidget {
               }
             },
             child: Container(
-              padding: const EdgeInsets.only(left: 8, top: 4),
+              padding: const EdgeInsets.only(left: 8),
               color: Colors.transparent, // Ensure hit test works for dragging
               child: Row(
                 children: [
-                  if (Platform.isMacOS) const SizedBox(width: 70), // Space for macOS traffic lights
+                  if (Platform.isMacOS) const SizedBox(width: 70), // Space for macOS traffic lights (Left)
                   
                   // App Title (Small)
-                  Text('Adome', style: TextStyle(color: labelColor, fontSize: 12, fontWeight: FontWeight.bold)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text('Adome', style: TextStyle(color: labelColor, fontSize: 12, fontWeight: FontWeight.bold)),
+                  ),
                   const SizedBox(width: 16),
 
                   _buildTab('Home', true, contentColor, borderColor, textColor),
@@ -53,19 +58,8 @@ class Ribbon extends StatelessWidget {
                   
                   const Spacer(),
                   
-                  // Window Controls (Windows/Linux)
-                  if (!Platform.isMacOS) ...[
-                     _buildWindowControl(Icons.remove, () => windowManager.minimize(), iconColor),
-                     _buildWindowControl(Icons.crop_square, () async {
-                        if (await windowManager.isMaximized()) {
-                          windowManager.unmaximize();
-                        } else {
-                          windowManager.maximize();
-                        }
-                     }, iconColor),
-                     _buildWindowControl(Icons.close, () => windowManager.close(), iconColor, isClose: true),
-                     const SizedBox(width: 8),
-                  ]
+                  // Window Controls (Right - Windows/Linux)
+                  WindowControls(iconColor: iconColor, isDark: isAppDark),
                 ],
               ),
             ),
@@ -73,6 +67,7 @@ class Ribbon extends StatelessWidget {
           // Content
           Container(
             height: 100,
+            width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: contentColor,
@@ -96,17 +91,6 @@ class Ribbon extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildWindowControl(IconData icon, VoidCallback onTap, Color iconColor, {bool isClose = false}) {
-    return InkWell(
-      onTap: onTap,
-      hoverColor: isClose ? Colors.red : null,
-      child: Padding(
-        padding: const EdgeInsets.all(6.0),
-        child: Icon(icon, size: 16, color: iconColor),
       ),
     );
   }

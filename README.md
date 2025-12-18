@@ -1,3 +1,3 @@
 # ADOME
 
-Actually Decent Offile Mermaid Editor
+Actually Decent Offline Mermaid Editor

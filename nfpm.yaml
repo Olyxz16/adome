@@ -11,24 +11,46 @@ homepage: "https://github.com/olyxz16/adome"
 license: "MIT"
 
 contents:
-  - src: ./build/linux/x64/release/bundle/*
-    dst: /opt/adome/
+  # 1. The Executable
+  - src: ./build/linux/x64/release/bundle/adome
+    dst: /opt/adome/adome
+    file_info:
+      mode: 0755
+
+  # 2. The Lib folder (Crucial for .so files)
+  - src: ./build/linux/x64/release/bundle/lib/*
+    dst: /opt/adome/lib/
+
+  # 3. The Data folder (Crucial for assets/fonts)
+  - src: ./build/linux/x64/release/bundle/data
+    dst: /opt/adome/data
+
+  # - src: ./build/linux/x64/release/bundle/data
+  #  dst: /opt/adome/data/flutter_assets
+
+  - src: ./linux/wrapper_script.sh
+    dst: /usr/bin/adome
+    file_info:
+      mode: 0755
+
+  # 4. The Desktop file
   - src: ./linux/adome.desktop
     dst: /usr/share/applications/adome.desktop
-  # Placeholder for icon
-  # - src: ./assets/icon.png
-  #   dst: /usr/share/icons/hicolor/512x512/apps/adome.png
 
 overrides:
   deb:
     depends:
       - libgtk-3-0
+      - libwebkit2gtk-4.1-0
+      - libepoxy0
     scripts:
       postinstall: ./linux/postinstall.sh
       preremove: ./linux/preremove.sh
   rpm:
     depends:
       - gtk3
+      - webkit2gtk4.1
+      - libepoxy
     scripts:
       postinstall: ./linux/postinstall.sh
       preremove: ./linux/preremove.sh

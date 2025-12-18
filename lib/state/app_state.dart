@@ -3,7 +3,12 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+// import 'package:flutter_svg/flutter_svg.dart'; // Not used for export directly
+// import 'package:vector_graphics/vector_graphics.dart' as vg;
+// import 'package:vector_graphics_compiler/vector_graphics_compiler.dart' as vg_compiler;
+// import 'package:vector_graphics_codec/vector_graphics_codec.dart' as vgc;
+// import 'package:xml/xml.dart' as xml; // Added
+
 import '../services/d2_service.dart';
 import '../services/mermaid_service.dart';
 import '../services/file_service.dart';
@@ -16,6 +21,54 @@ class AppState extends ChangeNotifier {
   final D2Service _d2Service = D2Service();
   final MermaidService _mermaidService = MermaidService();
   final FileService _fileService = FileService();
+// ... (rest of class)
+
+// ... inside exportPng ...
+  Future<void> exportPng() async {
+    String content = _engine == RenderingEngine.d2 ? _compiledD2Svg : _compiledMermaidSvg;
+    if (content.isEmpty) return;
+
+    debugPrint('AppState: PNG Export requires flutter_svg API adjustment for version 2.x');
+    /*
+    try {
+      // API Mismatch: SvgStringLoader.load is not directly accessible or requires specific arguments in flutter_svg 2.x
+      // and svg.fromSvgString is removed.
+      // Need to investigate correct way to rasterize SVG without a Widget context in this version.
+      
+      final SvgStringLoader loader = SvgStringLoader(content);
+      final PictureInfo pictureInfo = await loader.load(const SvgTheme());
+      
+      double width = pictureInfo.size.width;
+      double height = pictureInfo.size.height;
+      
+      if (width <= 0 || height <= 0) {
+        width = 800;
+        height = 600;
+      }
+      
+      const double scale = 2.0;
+      final int targetWidth = (width * scale).toInt();
+      final int targetHeight = (height * scale).toInt();
+
+      final ui.PictureRecorder recorder = ui.PictureRecorder();
+      final ui.Canvas canvas = ui.Canvas(recorder);
+      
+      canvas.scale(scale, scale);
+      canvas.drawPicture(pictureInfo.picture);
+      
+      final ui.Picture picture = recorder.endRecording();
+      final ui.Image image = await picture.toImage(targetWidth, targetHeight);
+      
+      final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      
+      if (byteData != null) {
+        await _fileService.saveBinaryFileAs(byteData.buffer.asUint8List(), suggestedFileName: 'diagram.png');
+      }
+    } catch (e) {
+      debugPrint('AppState: Error exporting PNG: $e');
+    }
+    */
+  }
 
   RenderingEngine _engine = RenderingEngine.mermaid;
   RenderingEngine get engine => _engine;
@@ -205,51 +258,5 @@ class AppState extends ChangeNotifier {
     
     // Use FileService to save with .svg extension
     await _fileService.saveFileAs(content, suggestedFileName: 'diagram.svg'); 
-  }
-
-  Future<void> exportPng() async {
-    String content = _engine == RenderingEngine.d2 ? _compiledD2Svg : _compiledMermaidSvg;
-    if (content.isEmpty) return;
-
-    debugPrint('AppState: PNG Export requires flutter_svg API adjustment for version 2.x');
-    /*
-    try {
-      // API Mismatch: SvgStringLoader.load is not directly accessible or requires specific arguments in flutter_svg 2.x
-      // and svg.fromSvgString is removed.
-      // Need to investigate correct way to rasterize SVG without a Widget context in this version.
-      
-      final SvgStringLoader loader = SvgStringLoader(content);
-      final PictureInfo pictureInfo = await loader.load(const SvgTheme());
-      
-      double width = pictureInfo.size.width;
-      double height = pictureInfo.size.height;
-      
-      if (width <= 0 || height <= 0) {
-        width = 800;
-        height = 600;
-      }
-      
-      const double scale = 2.0;
-      final int targetWidth = (width * scale).toInt();
-      final int targetHeight = (height * scale).toInt();
-
-      final ui.PictureRecorder recorder = ui.PictureRecorder();
-      final ui.Canvas canvas = ui.Canvas(recorder);
-      
-      canvas.scale(scale, scale);
-      canvas.drawPicture(pictureInfo.picture);
-      
-      final ui.Picture picture = recorder.endRecording();
-      final ui.Image image = await picture.toImage(targetWidth, targetHeight);
-      
-      final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      
-      if (byteData != null) {
-        await _fileService.saveBinaryFileAs(byteData.buffer.asUint8List(), suggestedFileName: 'diagram.png');
-      }
-    } catch (e) {
-      debugPrint('AppState: Error exporting PNG: $e');
-    }
-    */
   }
 }
