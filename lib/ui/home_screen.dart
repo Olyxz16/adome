@@ -11,6 +11,7 @@ class HomeScreen extends StatelessWidget {
     // Uses the Scaffold background color defined in the active App Theme (Light/Dark)
     return Scaffold(
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Ribbon(),
           Expanded(

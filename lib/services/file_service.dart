@@ -46,4 +46,14 @@ class FileService {
     await file.writeAsString(content);
     return result.path;
   }
+
+  Future<String?> saveBinaryFileAs(List<int> bytes, {String suggestedFileName = 'image.png'}) async {
+    final selector.FileSaveLocation? result = await selector.getSaveLocation(suggestedName: suggestedFileName);
+    if (result == null) {
+      return null;
+    }
+    final File file = File(result.path);
+    await file.writeAsBytes(bytes);
+    return result.path;
+  }
 }

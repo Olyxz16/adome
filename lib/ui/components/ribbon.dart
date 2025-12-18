@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:window_manager/window_manager.dart';
 import '../../state/app_state.dart';
 import '../../services/theme_service.dart';
 import '../../models/app_theme_config.dart';
@@ -25,14 +27,47 @@ class Ribbon extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Tabs
-          Container(
-            padding: const EdgeInsets.only(left: 8, top: 4),
-            child: Row(
-              children: [
-                _buildTab('Home', true, contentColor, borderColor, textColor),
-                _buildTab('View', false, contentColor, borderColor, labelColor), // Placeholder
-              ],
+          // Tabs & Window Title / Controls
+          GestureDetector(
+            onPanStart: (_) => windowManager.startDragging(),
+            onDoubleTap: () async {
+              if (await windowManager.isMaximized()) {
+                windowManager.unmaximize();
+              } else {
+                windowManager.maximize();
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.only(left: 8, top: 4),
+              color: Colors.transparent, // Ensure hit test works for dragging
+              child: Row(
+                children: [
+                  if (Platform.isMacOS) const SizedBox(width: 70), // Space for macOS traffic lights
+                  
+                  // App Title (Small)
+                  Text('Adome', style: TextStyle(color: labelColor, fontSize: 12, fontWeight: FontWeight.bold)),
+                  const SizedBox(width: 16),
+
+                  _buildTab('Home', true, contentColor, borderColor, textColor),
+                  _buildTab('View', false, contentColor, borderColor, labelColor), // Placeholder
+                  
+                  const Spacer(),
+                  
+                  // Window Controls (Windows/Linux)
+                  if (!Platform.isMacOS) ...[
+                     _buildWindowControl(Icons.remove, () => windowManager.minimize(), iconColor),
+                     _buildWindowControl(Icons.crop_square, () async {
+                        if (await windowManager.isMaximized()) {
+                          windowManager.unmaximize();
+                        } else {
+                          windowManager.maximize();
+                        }
+                     }, iconColor),
+                     _buildWindowControl(Icons.close, () => windowManager.close(), iconColor, isClose: true),
+                     const SizedBox(width: 8),
+                  ]
+                ],
+              ),
             ),
           ),
           // Content
@@ -61,6 +96,17 @@ class Ribbon extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildWindowControl(IconData icon, VoidCallback onTap, Color iconColor, {bool isClose = false}) {
+    return InkWell(
+      onTap: onTap,
+      hoverColor: isClose ? Colors.red : null,
+      child: Padding(
+        padding: const EdgeInsets.all(6.0),
+        child: Icon(icon, size: 16, color: iconColor),
       ),
     );
   }
@@ -145,15 +191,12 @@ class Ribbon extends StatelessWidget {
                 iconColor: iconColor,
                 textColor: textColor,
               ),
-              Opacity(
-                opacity: 0.5,
-                child: _buildLargeButton(
-                  icon: Icons.photo_camera,
-                  label: 'PNG',
-                  onTap: () {}, 
-                  iconColor: iconColor,
-                  textColor: textColor,
-                ),
+              _buildLargeButton(
+                icon: Icons.photo_camera,
+                label: 'PNG',
+                onTap: () => context.read<AppState>().exportPng(), // Updated to call exportPng
+                iconColor: iconColor,
+                textColor: textColor,
               ),
             ],
           ),

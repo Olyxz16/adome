@@ -11,7 +11,7 @@ import 'package:path_provider/path_provider.dart';
 class WebviewService {
   Webview? _webview;
   HttpServer? _server;
-  final Completer<void> _webviewReadyCompleter = Completer<void>();
+  Completer<void>? _webviewReadyCompleter;
   bool _isInitialized = false;
 
   bool get isInitialized => _isInitialized;
@@ -20,6 +20,8 @@ class WebviewService {
 
   Future<void> initialize() async {
     if (_isInitialized) return;
+    
+    _webviewReadyCompleter = Completer<void>();
 
     try {
       // 1. Prepare the temporary directory
@@ -52,8 +54,8 @@ class WebviewService {
       // Helper to handle messages
       void handleMessage(String body) {
          if (body == 'READY') {
-          if (!_webviewReadyCompleter.isCompleted) {
-            _webviewReadyCompleter.complete();
+          if (_webviewReadyCompleter != null && !_webviewReadyCompleter!.isCompleted) {
+            _webviewReadyCompleter!.complete();
             debugPrint('WebviewService: READY signal received.');
           }
         } else if (body.startsWith('SVG:')) {
@@ -61,20 +63,17 @@ class WebviewService {
         } else if (body.startsWith('ERROR:')) {
           _renderResultCompleter?.completeError(Exception(Uri.decodeComponent(body.substring(6))));
         } else if (body.startsWith('LOG:')) {
-          // debugPrint('WebviewJS: ${Uri.decodeComponent(body.substring(4))}'); // Disable verbose JS logs
+           // debugPrint('WebviewJS: ${Uri.decodeComponent(body.substring(4))}');
         }
       }
 
       _server!.listen((request) async {
-        // debugPrint('WebviewService: Server received request: ${request.method} ${request.uri}'); // Disable verbose server request logs
-        
         // BRIDGE HANDLER
         if (request.uri.path == '/BRIDGE') {
            final msg = request.uri.queryParameters['msg'];
            if (msg != null) {
               handleMessage(msg);
            }
-           // Add CORS just in case, though same origin
            request.response.headers.add('Access-Control-Allow-Origin', '*');
            request.response.statusCode = HttpStatus.ok;
            request.response.close();
@@ -110,7 +109,6 @@ class WebviewService {
       debugPrint('WebviewService: Serving at $url');
 
       // 5. Create Headless Webview
-      // Note: The C++ plugin code handles the 1x1 size by making it invisible/headless.
       _webview = await WebviewWindow.create(
         configuration: CreateConfiguration(
           title: "Mermaid Renderer (Headless)",
@@ -129,20 +127,22 @@ class WebviewService {
       _isInitialized = true;
       
       // Wait for READY
-      await _webviewReadyCompleter.future.timeout(
+      await _webviewReadyCompleter!.future.timeout(
         const Duration(seconds: 10), 
         onTimeout: () {
           debugPrint('WebviewService: Timed out waiting for READY signal.');
+          throw TimeoutException('Webview READY timeout');
         }
       );
       
     } catch (e) {
       debugPrint('WebviewService: Initialization failed: $e');
-      _isInitialized = false;
+      dispose(); // Cleanup partial init
+      rethrow;
     }
   }
 
-  Future<String> renderMermaid(String content, Map<String, dynamic> config) async {
+  Future<String> renderMermaid(String content, Map<String, dynamic> config, {bool retry = true}) async {
     if (!_isInitialized) {
       await initialize();
     }
@@ -152,8 +152,6 @@ class WebviewService {
     final configJson = jsonEncode(config);
     final escapedContent = jsonEncode(content);
 
-    // JavaScript to execute within the webview.
-    // We use send() which uses iframe navigation to communicate back to Dart.
     final jsCode = '''
       renderMermaid($escapedContent, $configJson)
         .then(svg => {
@@ -164,15 +162,35 @@ class WebviewService {
         });
       null;
     ''';
-    await _webview?.evaluateJavaScript(jsCode);
-
-    return _renderResultCompleter!.future.timeout(const Duration(seconds: 20));
+    
+    try {
+      await _webview?.evaluateJavaScript(jsCode);
+      return await _renderResultCompleter!.future.timeout(const Duration(seconds: 15));
+    } on TimeoutException {
+      debugPrint('WebviewService: Render timed out.');
+      if (retry) {
+        debugPrint('WebviewService: Retrying render (re-initializing)...');
+        dispose();
+        return renderMermaid(content, config, retry: false);
+      }
+      throw Exception('Mermaid rendering timed out.');
+    } catch (e) {
+      if (retry && (e.toString().contains('Webview') || e.toString().contains('closed'))) {
+         debugPrint('WebviewService: Error caught ($e). Retrying...');
+         dispose();
+         return renderMermaid(content, config, retry: false);
+      }
+      rethrow;
+    }
   }
 
   void dispose() {
-    _server?.close();
+    _server?.close(force: true);
     _webview?.close();
+    _webview = null;
+    _server = null;
     _isInitialized = false;
+    _webviewReadyCompleter = null;
     debugPrint('WebviewService: Disposed.');
   }
 }
