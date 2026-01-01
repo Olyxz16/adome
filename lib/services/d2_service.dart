@@ -1,43 +1,46 @@
 import 'dart:io';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:path_provider/path_provider.dart';
+import 'package:xml/xml.dart';
+import '../models/app_theme_config.dart';
 
 class D2Service {
-  Future<String> compile(String content, {int themeId = 0}) async {
-    print('D2Service: Starting compilation...');
+  Future<String> compile(String content, {int themeId = 0, String? backgroundColor, ThemeColors? themeColors}) async {
+    debugPrint('D2Service: Starting compilation...');
     try {
       final executablePath = await _resolveExecutablePath();
-      print('D2Service: Spawning d2 process at $executablePath...');
+      debugPrint('D2Service: Spawning d2 process at $executablePath...');
       final process = await Process.start(executablePath, ['-', '-', '--no-xml-tag', '--theme', themeId.toString()]);
       
       // Prevent deadlock: Listen to output streams BEFORE writing to stdin
       final stdoutFuture = process.stdout.transform(utf8.decoder).join();
       final stderrFuture = process.stderr.transform(utf8.decoder).join();
 
-      print('D2Service: Writing content to stdin...');
+      debugPrint('D2Service: Writing content to stdin...');
       // Use add for bytes or write for string. Write is fine but ensure encoding.
       process.stdin.write(content);
       await process.stdin.close();
-      print('D2Service: Stdin closed.');
+      debugPrint('D2Service: Stdin closed.');
 
       final results = await Future.wait([stdoutFuture, stderrFuture, process.exitCode]);
       final stdout = results[0] as String;
       final stderr = results[1] as String;
       final exitCode = results[2] as int;
 
-      print('D2Service: Exit Code: $exitCode');
-      if (stderr.isNotEmpty) print('D2Service: Stderr: $stderr');
+      debugPrint('D2Service: Exit Code: $exitCode');
+      if (stderr.isNotEmpty) debugPrint('D2Service: Stderr: $stderr');
 
       if (exitCode != 0) {
         throw Exception('D2 Error: $stderr');
       }
 
-      print('D2Service: Success. Output length: ${stdout.length}');
-      return _processSvg(stdout);
+      debugPrint('D2Service: Success. Output length: ${stdout.length}');
+      return _processSvg(stdout, backgroundColor, themeColors);
     } catch (e) {
-      print('D2Service: Exception caught: $e');
-      print('D2Service: PATH environment: ${Platform.environment['PATH']}');
+      debugPrint('D2Service: Exception caught: $e');
+      debugPrint('D2Service: PATH environment: ${Platform.environment['PATH']}');
       return '''
 <svg width="400" height="200" xmlns="http://www.w3.org/2000/svg">
   <rect width="100%" height="100%" fill="#f0f0f0"/>
@@ -65,17 +68,18 @@ class D2Service {
         final d2File = File('${binDir.path}/d2');
 
         if (!await d2File.exists()) {
-          print('D2Service: Extracting bundled d2 binary...');
+          debugPrint('D2Service: Extracting bundled d2 binary...');
           final byteData = await rootBundle.load('assets/bin/d2');
           await d2File.writeAsBytes(byteData.buffer.asUint8List());
           await Process.run('chmod', ['+x', d2File.path]);
-          print('D2Service: Extracted to ${d2File.path}');
+          debugPrint('D2Service: Extracted to ${d2File.path}');
         }
         return d2File.path;
       }
     } catch (e) {
-      print('D2Service: Failed to extract bundled binary ($e). Falling back to system paths.');
+      debugPrint('D2Service: Failed to extract bundled binary ($e). Falling back to system paths.');
     }
+
 
     // 2. Fallback to existing checks
     final home = Platform.environment['HOME'];
@@ -93,49 +97,145 @@ class D2Service {
     return 'd2';
   }
 
-  String _processSvg(String svg) {
-    var processed = svg;
+  String _processSvg(String svg, String? backgroundColor, ThemeColors? colors) {
+    try {
+      final document = XmlDocument.parse(svg);
 
-    // 1. Remove style blocks
-    processed = processed.replaceAll(RegExp(r'<style[\s\S]*?<\/style>'), '');
-    
-    // 2. Remove mask attributes
-    processed = processed.replaceAll(RegExp(r'\smask="[^"]*"'), '');
+      // 1. Remove all style blocks
+      document.findAllElements('style').toList().forEach((node) => node.remove());
 
-    // 3. Unwrap nested SVGs
-    final svgTagStart = RegExp(r'<svg[^>]*>');
-    final matches = svgTagStart.allMatches(processed).toList();
-    
-    if (matches.length >= 2) {
-      print('D2Service: Detected nested SVGs. Unwrapping...');
+      // 2. Flatten Nested SVG (D2 outputs an outer SVG wrapping an inner SVG)
+      // This seems to confuse some renderers or cause layout loops.
+      final root = document.rootElement;
+      final innerSvgs = root.findAllElements('svg').toList();
       
-      final innerStart = matches[1].start;
-      // We expect the structure: <svg outer> ... <svg inner> ... </svg inner> ... </svg outer>
-      // The outer SVG closes at the very end.
-      // The inner SVG closes before that.
-      
-      final lastSvgClose = processed.lastIndexOf('</svg>');
-      if (lastSvgClose > innerStart) {
-        // Find the closing tag BEFORE the last one
-        final innerSvgClose = processed.substring(0, lastSvgClose).lastIndexOf('</svg>');
+      if (innerSvgs.isNotEmpty) {
+        final inner = innerSvgs.first;
+        // Move all children of inner SVG to root
+        final children = inner.children.toList(); // Copy list
+        for (final child in children) {
+           child.remove(); // Detach
+           root.children.add(child); // Re-attach
+        }
         
-        if (innerSvgClose > innerStart) {
-           // We take from innerStart to innerSvgClose + length of </svg>
-           processed = processed.substring(innerStart, innerSvgClose + 6);
-        } else {
-           // Fallback: If we couldn't find a second closing tag, maybe there is only one at the end?
-           // (e.g. invalid nesting). Just take everything inside?
-           // Let's stick to the previous behavior but safer: take until lastSvgClose if no inner found?
-           // No, that strips the closing tag.
-           // Let's assume the previous code meant to take the content OF the inner SVG?
-           // No, we want the inner SVG element itself.
-           
-           // If we can't find proper nesting, leave it as is.
-           print('D2Service: Could not find inner closing tag. Returning original.');
+        // Copy viewBox from inner if root doesn't have one or if we prefer inner
+        final innerViewBox = inner.getAttribute('viewBox');
+        if (innerViewBox != null) {
+          root.setAttribute('viewBox', innerViewBox);
+        }
+        
+        // Remove the inner SVG element
+        inner.remove(); 
+      }
+
+      // 3. Remove mask attributes
+      for (final element in document.rootElement.descendants.whereType<XmlElement>()) {
+        element.removeAttribute('mask');
+      }
+
+      // 4. Remove Existing Background Rects (Direct children of SVG that are white)
+      // This prevents white backgrounds from blocking our themed background or being stuck white.
+      final whiteRectsToRemove = <XmlElement>[];
+      for (final rect in document.findAllElements('rect')) {
+         // Check if parent is SVG (direct child)
+         if (rect.parent is XmlElement && (rect.parent as XmlElement).name.local == 'svg') {
+            final fill = rect.getAttribute('fill')?.toLowerCase()?.trim();
+            if (fill != null) {
+               final isWhite = fill == 'white' || 
+                               fill == '#ffffff' || 
+                               fill == '#fff' || 
+                               fill == 'rgb(255,255,255)' ||
+                               fill == 'rgb(255, 255, 255)';
+               if (isWhite) {
+                 whiteRectsToRemove.add(rect);
+               }
+            }
+         }
+      }
+      for (final r in whiteRectsToRemove) {
+        r.remove();
+      }
+
+      // 5. Inject Proper Background
+      if (backgroundColor != null && backgroundColor.isNotEmpty) {
+          String x = '0';
+          String y = '0';
+          String w = '100%';
+          String h = '100%';
+
+          // Try to use viewBox dimensions
+          final root = document.rootElement;
+          final viewBox = root.getAttribute('viewBox');
+          if (viewBox != null) {
+            final parts = viewBox.split(RegExp(r'\s+')).where((s) => s.isNotEmpty).toList();
+            if (parts.length == 4) {
+              x = parts[0];
+              y = parts[1];
+              w = parts[2];
+              h = parts[3];
+            }
+          }
+
+          final bgRect = XmlElement(XmlName('rect'), [
+             XmlAttribute(XmlName('x'), x),
+             XmlAttribute(XmlName('y'), y),
+             XmlAttribute(XmlName('width'), w),
+             XmlAttribute(XmlName('height'), h),
+             XmlAttribute(XmlName('fill'), backgroundColor),
+             XmlAttribute(XmlName('stroke'), 'none'),
+          ]);
+          
+          if (root.children.isNotEmpty) {
+             root.children.insert(0, bgRect);
+          } else {
+             root.children.add(bgRect);
+          }
+      }
+
+      // 5. Force Apply Theme Colors (Inline Attributes)
+      if (colors != null) {
+        final shapes = ['rect', 'circle', 'ellipse', 'polygon'];
+        final lines = ['path', 'line', 'polyline'];
+        
+        for (final element in document.rootElement.descendants.whereType<XmlElement>()) {
+          final tagName = element.name.local;
+          
+          // Skip if this is our newly injected background rect (it won't match shapes logic easily but good to be safe)
+          // We can check if fill == backgroundColor.
+          final currentFill = element.getAttribute('fill');
+          if (currentFill == backgroundColor) continue;
+
+          if (shapes.contains(tagName)) {
+             element.removeAttribute('style');
+             element.setAttribute('stroke', colors.line);
+             element.setAttribute('stroke-width', '2');
+             element.setAttribute('fill', colors.surface);
+          } else if (lines.contains(tagName)) {
+             element.removeAttribute('style');
+             
+             if (currentFill == 'none' || currentFill == null) {
+               element.setAttribute('stroke', colors.line);
+               element.setAttribute('stroke-width', '2');
+               element.setAttribute('fill', 'none');
+             } else {
+               element.setAttribute('fill', colors.line);
+               element.setAttribute('stroke', 'none');
+             }
+          } else if (tagName == 'text') {
+             element.setAttribute('fill', colors.text);
+             element.removeAttribute('style');
+             element.setAttribute('font-family', 'sans-serif');
+          }
         }
       }
+
+      return document.toXmlString();
+    } catch (e) {
+      debugPrint('D2Service: XML Parse Error ($e). Returning original (sanitized).');
+      var processed = svg;
+      processed = processed.replaceAll(RegExp(r'<style[\s\S]*?<\/style>'), '');
+      processed = processed.replaceAll(RegExp(r'\smask="[^"]*"'), '');
+      return processed;
     }
-    
-    return processed;
   }
 }

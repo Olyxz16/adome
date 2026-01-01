@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import '../models/app_theme_config.dart';
 import 'webview_service.dart'; // Import the new WebviewService
 
@@ -58,7 +57,7 @@ class MermaidService {
     final shapeStyle = ' fill="${colors.surface}" stroke="${colors.line}" stroke-width="2" ';
     final lineStyle = ' fill="none" stroke="${colors.line}" stroke-width="2" ';
     final markerStyle = ' fill="${colors.line}" stroke="none" ';
-    final textStyle = ' fill="${colors.text}" font-family="sans-serif" ';
+    // final textStyle = ' fill="${colors.text}" font-family="sans-serif" ';
 
     processed = processed.replaceAll('<rect', '<rect$shapeStyle');
     processed = processed.replaceAll('<polygon', '<polygon$shapeStyle');

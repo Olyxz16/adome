@@ -3,6 +3,8 @@ import 'components/ribbon.dart';
 import 'components/editor.dart';
 import 'components/preview.dart';
 
+import 'components/resizable_split_view.dart';
+
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -15,13 +17,9 @@ class HomeScreen extends StatelessWidget {
         children: [
           const Ribbon(),
           Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Expanded(child: Editor()),
-                VerticalDivider(width: 1, color: Theme.of(context).dividerColor),
-                const Expanded(child: Preview()),
-              ],
+            child: ResizableSplitView(
+              left: const Editor(),
+              right: const Preview(),
             ),
           ),
         ],

@@ -177,28 +177,29 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _compile() async {
-    print('AppState: _compile called. Engine: $_engine');
+    debugPrint('AppState: _compile called. Engine: $_engine');
     _isCompiling = true;
     notifyListeners();
     
     try {
-      if (_engine == RenderingEngine.d2) {
-        _compiledD2Svg = await _d2Service.compile(
-          _d2Content, 
-          themeId: _activeThemeConfig.d2.themeId
-        );
-        print('AppState: D2 compiled. SVG length: ${_compiledD2Svg.length}');
-      } else {
-        _compiledMermaidSvg = await _mermaidService.compile(
+                  if (_engine == RenderingEngine.d2) {
+                    _compiledD2Svg = await _d2Service.compile(
+                      _d2Content, 
+                      themeId: _activeThemeConfig.d2.themeId,
+                      backgroundColor: _activeThemeConfig.colors.background,
+                      themeColors: _activeThemeConfig.colors,
+                    );
+                    debugPrint('AppState: D2 compiled. SVG length: ${_compiledD2Svg.length}');
+                  } else {        _compiledMermaidSvg = await _mermaidService.compile(
           _mermaidContent, 
           config: _activeThemeConfig,
           layout: _mermaidLayout,
           elkAlgorithm: _mermaidElkAlgorithm
         );
-        print('AppState: Mermaid compiled. SVG length: ${_compiledMermaidSvg.length}');
+        debugPrint('AppState: Mermaid compiled. SVG length: ${_compiledMermaidSvg.length}');
       }
     } catch (e) {
-      print('AppState: Compilation error: $e');
+      debugPrint('AppState: Compilation error: $e');
     } finally {
       _isCompiling = false;
       notifyListeners();

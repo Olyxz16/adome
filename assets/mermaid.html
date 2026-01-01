@@ -9,6 +9,21 @@
         }
     </script>
     <script src="mermaid.min.js"></script>
+    <script type="module">
+        // Attempt to load ELK layout engine for advanced graphs
+        try {
+            console.log('Loading ELK...');
+            const { default: elkLayouts } = await import('https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.4/dist/mermaid-layout-elk.esm.min.mjs');
+            if (typeof mermaid !== 'undefined') {
+                await mermaid.registerLayoutLoaders(elkLayouts);
+                console.log('Mermaid ELK registered successfully');
+            } else {
+                console.warn('Mermaid global not found when loading ELK');
+            }
+        } catch (e) {
+            console.warn('Mermaid ELK failed to load (likely offline):', e);
+        }
+    </script>
     <script>
         // Define render function
         async function renderMermaid(code, config) {
