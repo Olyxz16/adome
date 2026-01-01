@@ -222,9 +222,18 @@ class D2Service {
                element.setAttribute('stroke', 'none');
              }
           } else if (tagName == 'text') {
+             final style = element.getAttribute('style') ?? '';
+             final anchor = RegExp(r'text-anchor\s*:\s*([^;]+)').firstMatch(style)?.group(1)?.trim();
+             final baseline = RegExp(r'dominant-baseline\s*:\s*([^;]+)').firstMatch(style)?.group(1)?.trim();
+             final fontSize = RegExp(r'font-size\s*:\s*([^;]+)').firstMatch(style)?.group(1)?.trim();
+
              element.setAttribute('fill', colors.text);
              element.removeAttribute('style');
              element.setAttribute('font-family', 'sans-serif');
+             
+             if (anchor != null) element.setAttribute('text-anchor', anchor);
+             if (baseline != null) element.setAttribute('dominant-baseline', baseline);
+             if (fontSize != null) element.setAttribute('font-size', fontSize);
           }
         }
       }
