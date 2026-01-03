@@ -139,7 +139,7 @@ class D2Service {
       for (final rect in document.findAllElements('rect')) {
          // Check if parent is SVG (direct child)
          if (rect.parent is XmlElement && (rect.parent as XmlElement).name.local == 'svg') {
-            final fill = rect.getAttribute('fill')?.toLowerCase()?.trim();
+            final fill = rect.getAttribute('fill')?.toLowerCase().trim();
             if (fill != null) {
                final isWhite = fill == 'white' || 
                                fill == '#ffffff' || 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:adome/services/d2_service.dart'; // Make sure this is accessible
+ // Make sure this is accessible
 
 // Since D2Service is a class with private methods, we can't test _processSvg directly in a clean way without
 // making it public or using reflection (forbidden). 

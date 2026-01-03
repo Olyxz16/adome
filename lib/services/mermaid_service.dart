@@ -1,3 +1,5 @@
+import 'package:xml/xml.dart';
+import 'package:flutter/foundation.dart';
 import '../models/app_theme_config.dart';
 import 'webview_service.dart'; // Import the new WebviewService
 
@@ -40,107 +42,155 @@ class MermaidService {
 
     final svg = await _webviewService.renderMermaid(content, mermaidConfig);
     
-    return _processSvg(svg, config.colors);
+    return processSvg(svg, config.colors);
   }
 
-  String _processSvg(String svg, ThemeColors colors) {
-    
-    var processed = svg;
-
-    // 1. Remove style blocks (Commented out to test if flutter_svg can handle them)
-    // processed = processed.replaceAll(RegExp(r'<style[\s\S]*?<\/style>'), '');
-
-    // Remove <switch> tags
-    processed = processed.replaceAll(RegExp(r'<\/?switch[^>]*>'), '');
-
-    // 2. Inject default styles for shapes (Rect, Polygon, Circle, Ellipse)
-    final shapeStyle = ' fill="${colors.surface}" stroke="${colors.line}" stroke-width="2" ';
-    final lineStyle = ' fill="none" stroke="${colors.line}" stroke-width="2" ';
-    final markerStyle = ' fill="${colors.line}" stroke="none" ';
-    // final textStyle = ' fill="${colors.text}" font-family="sans-serif" ';
-
-    processed = processed.replaceAll('<rect', '<rect$shapeStyle');
-    processed = processed.replaceAll('<polygon', '<polygon$shapeStyle');
-    processed = processed.replaceAll('<circle', '<circle$shapeStyle');
-    processed = processed.replaceAll('<ellipse', '<ellipse$shapeStyle');
-    
-    // 3. Lines & Markers (Path)
-    processed = processed.replaceAllMapped(RegExp(r'<path([^>]*)>'), (match) {
-      final attrs = match.group(1) ?? '';
-      if (attrs.contains('arrowMarkerPath')) {
-        return '<path$markerStyle$attrs>';
-      } else if (attrs.contains('flowchart-link') || attrs.contains('edge-pattern')) {
-        return '<path$lineStyle$attrs>';
-      }
+  @visibleForTesting
+  String processSvg(String svg, ThemeColors colors) {
+    try {
+      final document = XmlDocument.parse(svg);
       
-      if (attrs.contains('fill="')) {
-         if (attrs.contains('fill="none"')) {
-           return match.group(0)!; 
-         } else {
-           final newAttrs = attrs.replaceAll(RegExp(r'fill="[^"]*"'), 'fill="${colors.surface}"');
-           return '<path$newAttrs>';
-         }
-      }
-      return '<path$lineStyle$attrs>';
-    });
+      // 1. Remove style blocks
+      document.findAllElements('style').toList().forEach((node) => node.remove());
 
-    // 4. Convert foreignObject to text
-    final foreignObjectRegex = RegExp(r'<foreignObject([^>]*)>([\s\S]*?)<\/foreignObject>');
-    
-    processed = processed.replaceAllMapped(foreignObjectRegex, (match) {
-      final attributes = match.group(1) ?? '';
-      final content = match.group(2) ?? '';
-      
-      final xMatch = RegExp(r'x="([^"]*)"').firstMatch(attributes);
-      final yMatch = RegExp(r'y="([^"]*)"').firstMatch(attributes);
-      final widthMatch = RegExp(r'width="([^"]*)"').firstMatch(attributes);
-      final heightMatch = RegExp(r'height="([^"]*)"').firstMatch(attributes);
-      
-      double x = double.tryParse(xMatch?.group(1) ?? '0') ?? 0;
-      double y = double.tryParse(yMatch?.group(1) ?? '0') ?? 0;
-      double h = double.tryParse(heightMatch?.group(1) ?? '0') ?? 0;
-      double w = double.tryParse(widthMatch?.group(1) ?? '0') ?? 0;
+      // 2. Remove switch tags (keep children if needed? Usually for compatibility, let's remove for now as per prev logic)
+      document.findAllElements('switch').toList().forEach((node) => node.remove());
 
-      var textContent = content.replaceAll(RegExp(r'<[^>]*>'), '').trim();
-      
-      textContent = textContent
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&apos;');
-      
-      if (textContent.isEmpty) return '';
+      // 3. Process Shapes (Rect, Polygon, Circle, Ellipse)
+      final shapes = ['rect', 'polygon', 'circle', 'ellipse'];
+      for (final element in document.rootElement.descendants.whereType<XmlElement>()) {
+        final tagName = element.name.local;
 
-      final cx = x + w / 2;
-      // Adjusted for vertical centering without dominant-baseline
-      // Heuristic: Move text down by about 70% of the font size to align baseline.
-      // Assuming a default font-size around 14px, 14 * 0.7 = ~9.8.
-      // So, y + h/2 - (h/2 - baseline_offset)
-      // Let's try y + h/2 + some manual adjustment.
-      final cy = y + h / 2 + (h * 0.2); // Adjust based on height, maybe 20% from center?
-
-      bool isEdgeLabel = content.contains('edgeLabel') || content.contains('labelBkg');
-
-      String result = '';
-      if (isEdgeLabel) {
-        result += '<rect x="$x" y="$y" width="$w" height="$h" fill="${colors.background}" rx="4" ry="4" />';
+        if (shapes.contains(tagName)) {
+           // Don't overwrite if it's a specific UI element like a button (rare in mermaid output but possible)
+           // But generally we want to enforce theme.
+           element.setAttribute('fill', colors.surface);
+           element.setAttribute('stroke', colors.line);
+           element.setAttribute('stroke-width', '2');
+        } else if (tagName == 'path') {
+           final id = element.getAttribute('id') ?? '';
+           final classes = element.getAttribute('class') ?? '';
+           final style = element.getAttribute('style') ?? '';
+           
+           if (id.contains('arrowMarker') || classes.contains('arrowMarkerPath') || style.contains('arrowMarkerPath')) {
+              element.setAttribute('fill', colors.line);
+              element.setAttribute('stroke', 'none');
+           } else if (classes.contains('flowchart-link') || classes.contains('edge-pattern')) {
+              element.setAttribute('fill', 'none');
+              element.setAttribute('stroke', colors.line);
+              element.setAttribute('stroke-width', '2');
+           } else {
+              // Generic path handling
+              final currentFill = element.getAttribute('fill');
+              if (currentFill == 'none' || currentFill == null) {
+                 // Likely a line
+                 // Only set if not already set? Or force?
+                 // Force consistent line style
+                 element.setAttribute('stroke', colors.line);
+                 element.setAttribute('stroke-width', '2');
+                 element.setAttribute('fill', 'none');
+              } else {
+                 // Likely a filled shape
+                 element.setAttribute('fill', colors.surface);
+                 element.setAttribute('stroke', colors.line); // Optional: add stroke to filled paths?
+              }
+           }
+        }
       }
 
-      // Removing font-size, text-anchor, dominant-baseline to let Flutter SVG default or CSS take over
-      result += '<text x="$cx" y="$cy">$textContent</text>';
-      return result;
-    });
-    
-    // 5. Text
-    // Commented out to avoid overriding inlined styles or creating duplicate attributes
-    /*
-    processed = processed.replaceAllMapped(RegExp(r'<text(\s|>)'), (match) {
-      return '<text$textStyle${match.group(1)}';
-    });
-    */
+      // 4. Convert foreignObject to text
+      // We need to collect them first to avoid modification during iteration issues if we change tree structure
+      final foreignObjects = document.findAllElements('foreignObject').toList();
+      
+      double parseValue(String? v) {
+        if (v == null) return 0;
+        final cleaned = v.replaceAll('px', '').trim();
+        return double.tryParse(cleaned) ?? 0;
+      }
+      
+      for (final fo in foreignObjects) {
+        final x = parseValue(fo.getAttribute('x'));
+        final y = parseValue(fo.getAttribute('y'));
+        final w = parseValue(fo.getAttribute('width'));
+        final h = parseValue(fo.getAttribute('height'));
+        
+        // Extract text content recursively
+        final textContent = fo.innerText.trim();
+        
+        if (textContent.isNotEmpty) {
+           final cx = x + w / 2;
+           final cy = y + h / 2;
 
-    return processed;
+           // Check if it's an edge label
+           final contentHtml = fo.innerXml; // check raw XML for classes?
+           bool isEdgeLabel = contentHtml.contains('edgeLabel') || contentHtml.contains('labelBkg');
+           
+           final parent = fo.parent;
+           if (parent != null) {
+             final index = parent.children.indexOf(fo);
+             
+             if (isEdgeLabel) {
+               final rect = XmlElement(XmlName('rect'), [
+                 XmlAttribute(XmlName('x'), x.toString()),
+                 XmlAttribute(XmlName('y'), y.toString()),
+                 XmlAttribute(XmlName('width'), w.toString()),
+                 XmlAttribute(XmlName('height'), h.toString()),
+                 XmlAttribute(XmlName('fill'), colors.background),
+                 XmlAttribute(XmlName('rx'), '4'),
+                 XmlAttribute(XmlName('ry'), '4'),
+               ]);
+               parent.children.insert(index, rect);
+             }
+             
+             final textNode = XmlElement(XmlName('text'), [
+                XmlAttribute(XmlName('x'), cx.toString()),
+                XmlAttribute(XmlName('y'), cy.toString()),
+                XmlAttribute(XmlName('dy'), '0.3em'),
+                XmlAttribute(XmlName('text-anchor'), 'middle'),
+                XmlAttribute(XmlName('fill'), colors.text),
+                XmlAttribute(XmlName('font-family'), 'sans-serif'),
+             ], [XmlText(textContent)]);
+             
+             parent.children.insert(isEdgeLabel ? index + 1 : index, textNode);
+             fo.remove();
+           }
+        } else {
+          fo.remove();
+        }
+      }
+
+      // 5. Fix Mermaid's double-dy issue on native text elements
+      // Consolidate vertical offset on the parent <text> element.
+      // flutter_svg seems to respect dy on <text> but ignores/misinterprets dy on the first <tspan>.
+      // Browsers sum them up.
+      // Solution: Ensure offset is on <text>, and first <tspan> has dy="0" (or removed).
+      for (final text in document.findAllElements('text')) {
+        final tspans = text.children.whereType<XmlElement>().where((e) => e.name.local == 'tspan');
+        if (tspans.isNotEmpty) {
+           final firstTspan = tspans.first;
+           final textDy = text.getAttribute('dy');
+           final tspanDy = firstTspan.getAttribute('dy');
+
+           if (textDy != null && textDy.isNotEmpty) {
+             // Case 1: Text has dy (e.g. 14px). Tspan has dy (e.g. 1em).
+             // Browser shows 14px + 1em (Too low). Flutter shows 14px (Good).
+             // Fix: Keep text dy. Remove tspan dy.
+             firstTspan.removeAttribute('dy');
+           } else if (tspanDy != null && tspanDy.isNotEmpty) {
+             // Case 2: Text has no dy. Tspan has dy (e.g. 1em).
+             // Browser shows 1em. Flutter shows 0 (Too high).
+             // Fix: Move dy to text.
+             text.setAttribute('dy', tspanDy);
+             firstTspan.removeAttribute('dy');
+           }
+        }
+      }
+
+      return document.toXmlString();
+    } catch (e) {
+      debugPrint('MermaidService: XML processing error: $e');
+      return svg; // Fallback to raw SVG
+    }
   }
 
   void dispose() {

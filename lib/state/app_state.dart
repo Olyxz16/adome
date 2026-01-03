@@ -39,7 +39,17 @@ class AppState extends ChangeNotifier {
         height = 600;
       }
       
-      const double scale = 2.0;
+      // Calculate scale to ensure high resolution (e.g. min 2400px on longest side)
+      const double minDimension = 2400.0;
+      final double maxSide = width > height ? width : height;
+      double scale = minDimension / maxSide;
+      
+      // Ensure at least 2x scale for anti-aliasing even if diagram is already huge
+      if (scale < 2.0) scale = 2.0;
+
+      // Cap scale to avoid memory issues (e.g. max 10x or max 8000px)
+      if (scale > 10.0) scale = 10.0;
+      
       final int targetWidth = (width * scale).toInt();
       final int targetHeight = (height * scale).toInt();
 
