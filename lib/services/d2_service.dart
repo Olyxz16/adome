@@ -5,6 +5,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:path_provider/path_provider.dart';
 import 'package:xml/xml.dart';
 import '../models/app_theme_config.dart';
+import '../utils/error_svg.dart';
 
 class D2Service {
   Future<String> compile(String content, {int themeId = 0, String? backgroundColor, ThemeColors? themeColors}) async {
@@ -41,17 +42,10 @@ class D2Service {
     } catch (e) {
       debugPrint('D2Service: Exception caught: $e');
       debugPrint('D2Service: PATH environment: ${Platform.environment['PATH']}');
-      return '''
-<svg width="400" height="200" xmlns="http://www.w3.org/2000/svg">
-  <rect width="100%" height="100%" fill="#f0f0f0"/>
-  <text x="50%" y="50%" font-family="monospace" font-size="14" fill="red" text-anchor="middle" dominant-baseline="middle">
-    Error compiling D2: ${e.toString().replaceAll('<', '&lt;').replaceAll('>', '&gt;')}
-  </text>
-  <text x="50%" y="70%" font-family="monospace" font-size="12" fill="#555" text-anchor="middle" dominant-baseline="middle">
-    Ensure 'd2' is installed and in your PATH.
-  </text>
-</svg>
-''';
+      return generateErrorSvg(
+        'Error compiling D2: $e',
+        subMessage: "Ensure 'd2' is installed and in your PATH.",
+      );
     }
   }
 

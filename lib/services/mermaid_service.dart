@@ -2,6 +2,7 @@ import 'package:xml/xml.dart';
 import 'package:flutter/foundation.dart';
 import '../models/app_theme_config.dart';
 import 'webview_service.dart'; // Import the new WebviewService
+import '../utils/error_svg.dart';
 
 class MermaidService {
   final WebviewService _webviewService = WebviewService(); // Instantiate WebviewService
@@ -11,11 +12,16 @@ class MermaidService {
     String layout = 'default',
     String elkAlgorithm = 'layered',
   }) async {
-    // Initialize the webview service if it hasn't been yet.
-    if (!_webviewService.isInitialized) {
-      await _webviewService.initialize();
+    try {
+      // Initialize the webview service if it hasn't been yet.
+      if (!_webviewService.isInitialized) {
+        await _webviewService.initialize();
+      }
+      return await _compileWithWebview(content, config: config, layout: layout, elkAlgorithm: elkAlgorithm);
+    } catch (e) {
+      debugPrint('MermaidService: Compilation failed: $e');
+      return generateErrorSvg('Mermaid Error: $e');
     }
-    return await _compileWithWebview(content, config: config, layout: layout, elkAlgorithm: elkAlgorithm);
   }
 
   Future<String> _compileWithWebview(String content, {
