@@ -41,8 +41,12 @@ void main() {
       ),
     );
 
-    // Verify InteractiveViewer is present (this confirms our change)
+    // Verify InteractiveViewer is present
     expect(find.byType(InteractiveViewer), findsOneWidget);
+
+    // Verify Listener is wrapping InteractiveViewer (or somewhere above it)
+    expect(find.byType(Listener), findsAtLeastNWidgets(1));
+    expect(find.ancestor(of: find.byType(InteractiveViewer), matching: find.byType(Listener)), findsWidgets);
 
     // Verify SvgPicture is present
     expect(find.byType(SvgPicture), findsOneWidget);
